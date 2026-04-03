@@ -1,24 +1,25 @@
 {
   "name": "beecompass-frontend",
   "version": "1.0.0",
-  "private": true,
-  "engines": {
-    "node": "20.x"
-  },
+  "type": "module",
+  "main": "server.js",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "engines": {
+    "node": ">=20"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "next": "^13.4.0",
-    "exifr": "^7.0.0" 
-  },
-  "devDependencies": {
-    "eslint": "^8.40.0",
-    "eslint-config-next": "^13.4.0"
+    "@anthropic-ai/sdk": "^0.36.0",
+    "@supabase/supabase-js": "^2.43.4",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-rate-limit": "^7.3.1",
+    "helmet": "^7.1.0",
+    "pdfkit": "^0.15.0",
+    "stripe": "^16.0.0",
+    "twilio": "^5.2.0"
   }
 }
