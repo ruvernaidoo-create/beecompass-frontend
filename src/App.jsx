@@ -23,6 +23,13 @@ const apiFetch = async (path, options = {}, token = null) => {
   return res.json();
 };
 
+import VerificationSuccess from './pages/VerificationSuccess';
+
+// Add this route:
+<Route path="/auth/callback" element={<VerificationSuccess />} />
+
+
+
 /* ─── DESIGN TOKENS ─────────────────────────────────────── */
 const C = {
   navy:"#0D1421", navyMid:"#162035", copper:"#C4692A", copperLt:"#D4834A",
@@ -765,6 +772,10 @@ function More({setPage,user,onLogout}) {
 }
 
 /* ─── ROOT APP ───────────────────────────────────────────── */
+
+
+
+
 const NAV=[{id:"dashboard",label:"Home",icon:"⊞"},{id:"calc",label:"Score",icon:"◎"},{id:"gaps",label:"Gaps",icon:"◈"},{id:"docs",label:"Docs",icon:"◇"},{id:"more",label:"More",icon:"···"}];
 const MAIN_PAGES=NAV.map(n=>n.id);
 
