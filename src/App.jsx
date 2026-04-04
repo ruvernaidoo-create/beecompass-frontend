@@ -7,7 +7,9 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
+/*const API = import.meta.env.VITE_API_URL || "http://localhost:8080";*/
+
+const API = "https://beecompass-backend-production.up.railway.app";
 
 const apiFetch = async (path, options = {}, token = null) => {
   const res = await fetch(`${API}${path}`, {
