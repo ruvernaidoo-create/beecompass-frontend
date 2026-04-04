@@ -1,1146 +1,2246 @@
-import { useState, useEffect, useRef, useMemo } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useState, useEffect, useRef } from "react";
 
-/* ── Supabase ─────────────────────────────────────────────── */
-const sb = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_ANON_KEY
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const API_URL = import.meta.env.VITE_API_URL;
+
+/* ─── Global Styles ─────────────────────────────────────────── */
+const GlobalStyles = () => (
+  <style>{`
+    @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&display=swap');
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --navy:        #0D1B2A;
+      --navy-mid:    #162236;
+      --navy-light:  #1E3250;
+      --gold:        #BF8C3A;
+      --gold-light:  #D4A84B;
+      --gold-pale:   #F5EDD8;
+      --white:       #FFFFFF;
+      --bg:          #F7F6F3;
+      --bg-card:     #FFFFFF;
+      --border:      #E8E6E0;
+      --border-mid:  #D4D0C8;
+      --muted:       #8A8680;
+      --text:        #1A1917;
+      --text-mid:    #4A4845;
+      --success:     #1F6B40;
+      --success-bg:  #EAF5EE;
+      --warn:        #9B5A00;
+      --warn-bg:     #FEF3E0;
+      --danger:      #B03020;
+      --danger-bg:   #FCECEB;
+      --font-d:      'Playfair Display', Georgia, serif;
+      --font-b:      'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      --sh-sm:  0 1px 4px rgba(13,27,42,.07), 0 1px 2px rgba(13,27,42,.05);
+      --sh-md:  0 4px 16px rgba(13,27,42,.09), 0 2px 6px rgba(13,27,42,.05);
+      --sh-lg:  0 12px 40px rgba(13,27,42,.12), 0 4px 12px rgba(13,27,42,.07);
+      --r-sm: 8px; --r-md: 14px; --r-lg: 22px;
+      --ease: cubic-bezier(.4,0,.2,1);
+      --t: .2s var(--ease);
+    }
+
+    html, body, #root { height: 100%; }
+    body {
+      font-family: var(--font-b);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.5;
+    }
+
+    input, button, textarea, select {
+      font-family: var(--font-b);
+    }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-mid); border-radius: 3px; }
+
+    /* ── Layout shell ── */
+    .shell { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 252px;
+      background: var(--navy);
+      display: flex; flex-direction: column;
+      flex-shrink: 0;
+      transition: left .25s var(--ease);
+    }
+
+    .sb-logo {
+      padding: 24px 20px 18px;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+      display: flex; align-items: center; gap: 10px;
+    }
+
+    .sb-logo-mark {
+      width: 32px; height: 32px;
+      border-radius: 8px;
+      background: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px; font-weight: 700;
+      color: var(--white);
+      flex-shrink: 0;
+    }
+
+    .sb-logo-text {
+      font-family: var(--font-d);
+      font-size: 18px; font-weight: 700;
+      letter-spacing: -.2px;
+    }
+
+    .sb-logo-bee { color: var(--white); }
+    .sb-logo-compass { color: var(--gold); }
+
+    .sb-nav {
+      flex: 1; padding: 16px 10px;
+      overflow-y: auto; display: flex; flex-direction: column; gap: 1px;
+    }
+
+    .sb-label {
+      font-size: 10px; font-weight: 600;
+      letter-spacing: 1.2px; text-transform: uppercase;
+      color: rgba(255,255,255,.3);
+      padding: 14px 10px 5px;
+    }
+
+    .sb-item {
+      display: flex; align-items: center; gap: 11px;
+      padding: 9px 10px;
+      border-radius: var(--r-sm);
+      cursor: pointer; border: none; background: none;
+      color: rgba(255,255,255,.58);
+      font-size: 13.5px; font-weight: 400;
+      width: 100%; text-align: left;
+      transition: all var(--t);
+    }
+    .sb-item:hover { background: rgba(255,255,255,.06); color: var(--white); }
+    .sb-item.active { background: rgba(191,140,58,.16); color: #E8C068; font-weight: 500; }
+    .sb-item .si-icon { font-size: 15px; width: 18px; text-align: center; flex-shrink: 0; }
+
+    .sb-footer {
+      padding: 14px 10px;
+      border-top: 1px solid rgba(255,255,255,.07);
+    }
+
+    .sb-user {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px;
+      border-radius: var(--r-sm);
+      cursor: pointer;
+      transition: background var(--t);
+    }
+    .sb-user:hover { background: rgba(255,255,255,.05); }
+
+    .sb-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      background: var(--gold);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: var(--white);
+      flex-shrink: 0;
+    }
+
+    .sb-user-info { flex: 1; min-width: 0; }
+    .sb-user-name {
+      font-size: 13px; font-weight: 500; color: var(--white);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .sb-user-role { font-size: 11px; color: rgba(255,255,255,.38); }
+
+    /* ── Main area ── */
+    .main { flex: 1; overflow-y: auto; display: flex; flex-direction: column; min-width: 0; }
+
+    /* ── Topbar ── */
+    .topbar {
+      background: var(--white);
+      border-bottom: 1px solid var(--border);
+      padding: 0 28px; height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      flex-shrink: 0; position: sticky; top: 0; z-index: 20;
+    }
+
+    .topbar-left { display: flex; align-items: center; gap: 12px; }
+
+    .topbar-title {
+      font-family: var(--font-d);
+      font-size: 19px; font-weight: 600; color: var(--navy);
+    }
+
+    .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+    .icon-btn {
+      width: 36px; height: 36px;
+      border-radius: var(--r-sm);
+      border: 1px solid var(--border);
+      background: var(--white);
+      display: flex; align-items: center; justify-content: center;
+      cursor: pointer; font-size: 16px;
+      color: var(--text-mid);
+      transition: all var(--t);
+    }
+    .icon-btn:hover { border-color: var(--gold); color: var(--gold); }
+
+    .hamburger {
+      display: none;
+      width: 36px; height: 36px;
+      border: none; background: none;
+      cursor: pointer; font-size: 20px;
+      color: var(--navy);
+      align-items: center; justify-content: center;
+      border-radius: var(--r-sm);
+      transition: background var(--t);
+    }
+    .hamburger:hover { background: var(--bg); }
+
+    /* ── Page content ── */
+    .page { padding: 28px; flex: 1; }
+
+    .page-header { margin-bottom: 24px; }
+    .page-title {
+      font-family: var(--font-d);
+      font-size: 24px; font-weight: 700;
+      color: var(--navy); margin-bottom: 4px;
+    }
+    .page-sub { font-size: 14px; color: var(--muted); }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 18px;
+      border-radius: var(--r-sm);
+      font-size: 13.5px; font-weight: 500;
+      cursor: pointer; border: none;
+      transition: all var(--t);
+      white-space: nowrap; text-decoration: none;
+    }
+    .btn-primary { background: var(--gold); color: var(--white); }
+    .btn-primary:hover { background: var(--gold-light); box-shadow: 0 4px 14px rgba(191,140,58,.3); transform: translateY(-1px); }
+    .btn-navy { background: var(--navy); color: var(--white); }
+    .btn-navy:hover { background: var(--navy-mid); transform: translateY(-1px); box-shadow: var(--sh-md); }
+    .btn-outline { background: var(--white); color: var(--navy); border: 1.5px solid var(--border); }
+    .btn-outline:hover { border-color: var(--navy); background: var(--bg); }
+    .btn-ghost { background: transparent; color: var(--text-mid); padding: 9px 12px; }
+    .btn-ghost:hover { background: var(--bg); color: var(--text); }
+    .btn-lg { padding: 13px 26px; font-size: 15px; }
+    .btn-sm { padding: 7px 13px; font-size: 12.5px; }
+    .btn-full { width: 100%; justify-content: center; }
+    .btn-danger { background: var(--danger-bg); color: var(--danger); }
+    .btn:disabled { opacity: .5; cursor: not-allowed; transform: none !important; }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      padding: 22px;
+      box-shadow: var(--sh-sm);
+    }
+
+    .card-title {
+      font-family: var(--font-d);
+      font-size: 16px; font-weight: 600;
+      color: var(--navy); margin-bottom: 3px;
+    }
+    .card-sub { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+
+    /* ── Stats grid ── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px; margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 18px 20px;
+      box-shadow: var(--sh-sm);
+    }
+
+    .stat-label {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .6px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 8px;
+    }
+
+    .stat-value {
+      font-family: var(--font-d);
+      font-size: 30px; font-weight: 700;
+      color: var(--navy); line-height: 1; margin-bottom: 5px;
+    }
+
+    .stat-change { font-size: 12px; color: var(--muted); }
+    .stat-up { color: var(--success); }
+    .stat-down { color: var(--danger); }
+
+    /* ── Progress bar ── */
+    .prog-wrap {
+      height: 6px; background: var(--bg);
+      border-radius: 3px; overflow: hidden;
+    }
+    .prog-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--gold), var(--gold-light));
+      border-radius: 3px;
+      transition: width .8s var(--ease);
+    }
+    .prog-fill.low { background: linear-gradient(90deg, #C03020, #E04030); }
+    .prog-fill.mid { background: linear-gradient(90deg, #E07B39, #F0944A); }
+    .prog-fill.good { background: linear-gradient(90deg, #1F6B40, #2D8A55); }
+
+    /* ── Forms ── */
+    .form-group { margin-bottom: 16px; }
+
+    .form-label {
+      display: block; font-size: 11.5px; font-weight: 600;
+      letter-spacing: .5px; text-transform: uppercase;
+      color: var(--text-mid); margin-bottom: 6px;
+    }
+
+    .form-input {
+      width: 100%; padding: 11px 14px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-sm);
+      font-size: 14.5px; color: var(--text);
+      transition: all var(--t); outline: none;
+    }
+    .form-input:focus {
+      background: var(--white);
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(191,140,58,.13);
+    }
+    .form-input::placeholder { color: var(--muted); }
+    .form-input.error { border-color: var(--danger); }
+
+    .form-select {
+      width: 100%; padding: 11px 14px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-sm);
+      font-size: 14.5px; color: var(--text);
+      transition: all var(--t); outline: none;
+      appearance: none; cursor: pointer;
+    }
+    .form-select:focus {
+      background: var(--white);
+      border-color: var(--gold);
+      box-shadow: 0 0 0 3px rgba(191,140,58,.13);
+    }
+
+    .form-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+    .error-box {
+      background: var(--danger-bg); color: var(--danger);
+      border: 1px solid rgba(176,48,32,.18);
+      border-radius: var(--r-sm);
+      padding: 11px 14px; font-size: 13px;
+      display: flex; align-items: flex-start; gap: 8px;
+    }
+
+    .success-box {
+      background: var(--success-bg); color: var(--success);
+      border: 1px solid rgba(31,107,64,.18);
+      border-radius: var(--r-sm);
+      padding: 11px 14px; font-size: 13px;
+    }
+
+    /* ── Badge ── */
+    .badge {
+      display: inline-flex; align-items: center;
+      padding: 3px 9px; border-radius: 100px;
+      font-size: 11px; font-weight: 600; letter-spacing: .2px;
+    }
+    .badge-gold { background: var(--gold-pale); color: var(--warn); }
+    .badge-green { background: var(--success-bg); color: var(--success); }
+    .badge-navy { background: rgba(13,27,42,.08); color: var(--navy); }
+    .badge-red { background: var(--danger-bg); color: var(--danger); }
+    .badge-gray { background: var(--bg); color: var(--muted); border: 1px solid var(--border); }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    .divider-text {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--muted); font-size: 12px; margin: 16px 0;
+    }
+    .divider-text::before, .divider-text::after {
+      content: ''; flex: 1; height: 1px; background: var(--border);
+    }
+
+    /* ── Overlay ── */
+    .overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,.45);
+      z-index: 40; display: none;
+    }
+
+    /* ── Mobile bottom nav ── */
+    .mobile-nav {
+      display: none;
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: var(--white);
+      border-top: 1px solid var(--border);
+      padding: 6px 0 max(6px, env(safe-area-inset-bottom));
+      z-index: 30;
+    }
+    .mobile-nav-inner {
+      display: flex; justify-content: space-around;
+      max-width: 500px; margin: 0 auto;
+    }
+    .mn-item {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 2px;
+      padding: 6px 10px;
+      cursor: pointer; border: none; background: none;
+      color: var(--muted); font-size: 10px; font-weight: 500;
+      transition: color var(--t);
+    }
+    .mn-item.active { color: var(--gold); }
+    .mn-icon { font-size: 19px; }
+
+    /* ── Landing page ── */
+    .land { min-height: 100vh; background: var(--bg); }
+
+    .land-nav {
+      position: sticky; top: 0; z-index: 50;
+      background: rgba(247,246,243,.94);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px; height: 64px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .land-nav-links {
+      display: flex; align-items: center; gap: 28px;
+    }
+    .land-nav-link {
+      font-size: 14px; color: var(--text-mid);
+      cursor: pointer; border: none; background: none;
+      transition: color var(--t);
+    }
+    .land-nav-link:hover { color: var(--navy); }
+
+    .land-nav-actions { display: flex; align-items: center; gap: 10px; }
+
+    .land-hero {
+      max-width: 1160px; margin: 0 auto;
+      padding: 72px 40px 80px;
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 60px; align-items: center;
+    }
+
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 7px;
+      background: var(--gold-pale); color: var(--warn);
+      padding: 5px 13px; border-radius: 100px;
+      font-size: 11.5px; font-weight: 600;
+      letter-spacing: .6px; text-transform: uppercase;
+      margin-bottom: 18px;
+    }
+
+    .hero-h {
+      font-family: var(--font-d);
+      font-size: clamp(34px, 3.8vw, 50px);
+      font-weight: 700; color: var(--navy);
+      line-height: 1.15; margin-bottom: 18px;
+      letter-spacing: -.3px;
+    }
+    .hero-h span { color: var(--gold); }
+
+    .hero-p {
+      font-size: 16.5px; color: var(--text-mid);
+      line-height: 1.72; margin-bottom: 32px;
+    }
+
+    .hero-cta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+
+    .hero-trust {
+      display: flex; align-items: center; gap: 6px;
+      margin-top: 20px; font-size: 12.5px; color: var(--muted);
+    }
+    .trust-dot { width: 4px; height: 4px; border-radius: 50%; background: var(--muted); }
+
+    .hero-visual {
+      background: var(--navy);
+      border-radius: var(--r-lg);
+      padding: 32px; position: relative;
+      overflow: hidden;
+    }
+    .hero-visual::before {
+      content: '';
+      position: absolute; top: -50px; right: -50px;
+      width: 220px; height: 220px; border-radius: 50%;
+      background: rgba(191,140,58,.1);
+    }
+    .hero-visual::after {
+      content: '';
+      position: absolute; bottom: -60px; left: -30px;
+      width: 180px; height: 180px; border-radius: 50%;
+      background: rgba(191,140,58,.06);
+    }
+
+    .hv-score-ring {
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px;
+    }
+
+    .hv-score-inner {
+      width: 120px; height: 120px; border-radius: 50%;
+      background: rgba(255,255,255,.06);
+      border: 3px solid var(--gold);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+    }
+
+    .hv-score-num {
+      font-family: var(--font-d);
+      font-size: 36px; font-weight: 700; color: var(--white);
+      line-height: 1;
+    }
+
+    .hv-score-label { font-size: 11px; color: rgba(255,255,255,.5); }
+
+    .hv-pillars { display: flex; flex-direction: column; gap: 10px; }
+
+    .hv-pillar {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .hv-pillar-name { font-size: 12px; color: rgba(255,255,255,.6); width: 130px; }
+    .hv-pillar-bar {
+      flex: 1; height: 4px; background: rgba(255,255,255,.1);
+      border-radius: 2px; overflow: hidden;
+    }
+    .hv-pillar-fill { height: 100%; background: var(--gold); border-radius: 2px; }
+    .hv-pillar-pct { font-size: 12px; color: rgba(255,255,255,.5); width: 32px; text-align: right; }
+
+    /* Features */
+    .land-section { padding: 80px 40px; }
+    .land-section.alt { background: var(--white); }
+
+    .sec-header { text-align: center; max-width: 580px; margin: 0 auto 48px; }
+    .sec-eye {
+      font-size: 11.5px; font-weight: 600;
+      letter-spacing: 1.4px; text-transform: uppercase;
+      color: var(--gold); margin-bottom: 10px;
+    }
+    .sec-h {
+      font-family: var(--font-d);
+      font-size: clamp(26px, 3vw, 38px);
+      font-weight: 700; color: var(--navy);
+      line-height: 1.2; margin-bottom: 14px;
+    }
+    .sec-p { font-size: 15.5px; color: var(--text-mid); line-height: 1.7; }
+
+    .feat-grid {
+      max-width: 1160px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 18px;
+    }
+
+    .feat-card {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 24px;
+      transition: all var(--t);
+    }
+    .feat-card:hover { border-color: var(--gold); transform: translateY(-2px); box-shadow: var(--sh-md); }
+
+    .feat-icon {
+      width: 40px; height: 40px; border-radius: 9px;
+      background: var(--navy); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 18px; margin-bottom: 14px;
+    }
+
+    .feat-title {
+      font-family: var(--font-d);
+      font-size: 16px; font-weight: 600;
+      color: var(--navy); margin-bottom: 6px;
+    }
+    .feat-desc { font-size: 13.5px; color: var(--text-mid); line-height: 1.6; }
+
+    /* Pricing */
+    .price-grid {
+      max-width: 1060px; margin: 0 auto;
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+      gap: 18px; align-items: start;
+    }
+
+    .price-card {
+      background: var(--white);
+      border: 1.5px solid var(--border);
+      border-radius: var(--r-md); padding: 26px;
+      position: relative; transition: all var(--t);
+    }
+    .price-card:hover { box-shadow: var(--sh-md); }
+    .price-card.feat { border-color: var(--gold); box-shadow: 0 0 0 1px var(--gold), var(--sh-md); }
+
+    .price-badge {
+      position: absolute; top: -11px; left: 50%;
+      transform: translateX(-50%);
+      background: var(--gold); color: var(--white);
+      font-size: 10.5px; font-weight: 700;
+      letter-spacing: .5px; text-transform: uppercase;
+      padding: 3px 12px; border-radius: 100px;
+      white-space: nowrap;
+    }
+
+    .price-plan {
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .8px; text-transform: uppercase;
+      color: var(--muted); margin-bottom: 10px;
+    }
+
+    .price-val {
+      font-family: var(--font-d);
+      font-size: 36px; font-weight: 700;
+      color: var(--navy); line-height: 1; margin-bottom: 3px;
+    }
+    .price-val span { font-size: 16px; font-weight: 400; }
+
+    .price-per { font-size: 12.5px; color: var(--muted); margin-bottom: 18px; }
+
+    .price-feats { list-style: none; margin-bottom: 20px; }
+    .price-feats li {
+      display: flex; align-items: center; gap: 9px;
+      font-size: 13px; color: var(--text-mid);
+      padding: 7px 0; border-bottom: 1px solid var(--bg);
+    }
+    .price-feats li:last-child { border-bottom: none; }
+    .pf-y { color: var(--success); font-size: 12px; }
+    .pf-n { color: var(--muted); font-size: 12px; }
+
+    /* Footer */
+    .land-footer {
+      background: var(--navy); padding: 40px;
+      text-align: center;
+    }
+    .land-footer-logo {
+      font-family: var(--font-d); font-size: 20px; font-weight: 700;
+      margin-bottom: 12px;
+    }
+    .land-footer p { font-size: 12.5px; color: rgba(255,255,255,.35); line-height: 1.7; }
+
+    /* ── Auth page ── */
+    .auth-page {
+      min-height: 100vh;
+      display: grid; grid-template-columns: 1fr 1fr;
+    }
+
+    .auth-left {
+      background: var(--navy);
+      padding: 52px 52px;
+      display: flex; flex-direction: column;
+      justify-content: space-between;
+      position: relative; overflow: hidden;
+    }
+    .auth-left::before {
+      content: '';
+      position: absolute; bottom: -80px; left: -60px;
+      width: 340px; height: 340px; border-radius: 50%;
+      background: rgba(191,140,58,.08);
+    }
+    .auth-left::after {
+      content: '';
+      position: absolute; top: -40px; right: -60px;
+      width: 220px; height: 220px; border-radius: 50%;
+      background: rgba(191,140,58,.05);
+    }
+
+    .al-logo {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .al-logo-mark {
+      width: 34px; height: 34px; border-radius: 8px;
+      background: var(--gold); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 18px; font-weight: 700; color: var(--white);
+    }
+    .al-logo-text {
+      font-family: var(--font-d); font-size: 20px; font-weight: 700;
+    }
+    .al-bee { color: var(--white); }
+    .al-compass { color: var(--gold); }
+
+    .al-tagline {
+      position: relative; z-index: 1;
+    }
+    .al-tagline h2 {
+      font-family: var(--font-d);
+      font-size: clamp(26px, 2.8vw, 36px);
+      font-weight: 700; color: var(--white);
+      line-height: 1.3; margin-bottom: 16px;
+    }
+    .al-tagline h2 span { color: var(--gold); }
+    .al-tagline p {
+      font-size: 14.5px; color: rgba(255,255,255,.58);
+      line-height: 1.7;
+    }
+
+    .al-points { list-style: none; margin-top: 28px; }
+    .al-points li {
+      display: flex; align-items: center; gap: 12px;
+      color: rgba(255,255,255,.68); font-size: 14px;
+      padding: 9px 0;
+      border-bottom: 1px solid rgba(255,255,255,.07);
+    }
+    .al-points li:last-child { border-bottom: none; }
+    .al-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+    .al-disclaimer {
+      position: relative; z-index: 1;
+      font-size: 11.5px; color: rgba(255,255,255,.3);
+      line-height: 1.6;
+    }
+
+    .auth-right {
+      background: var(--bg);
+      padding: 52px; display: flex;
+      flex-direction: column; justify-content: center;
+      align-items: center;
+    }
+
+    .auth-box { width: 100%; max-width: 400px; }
+
+    .auth-box-h {
+      font-family: var(--font-d);
+      font-size: 26px; font-weight: 700;
+      color: var(--navy); margin-bottom: 4px;
+    }
+    .auth-box-sub { font-size: 14px; color: var(--muted); margin-bottom: 28px; }
+
+    .auth-tabs {
+      display: flex;
+      background: var(--border); border-radius: 9px;
+      padding: 3px; margin-bottom: 28px;
+    }
+    .auth-tab {
+      flex: 1; padding: 9px;
+      border: none; background: none;
+      border-radius: 6px; font-size: 13.5px;
+      font-weight: 500; cursor: pointer;
+      transition: all var(--t); color: var(--muted);
+    }
+    .auth-tab.active { background: var(--white); color: var(--navy); box-shadow: var(--sh-sm); }
+
+    /* ── Dashboard ── */
+    .dash-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 18px; }
+
+    .pillar-list { display: flex; flex-direction: column; gap: 0; }
+    .pillar-row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 13px 0;
+      border-bottom: 1px solid var(--bg);
+    }
+    .pillar-row:last-child { border-bottom: none; }
+    .pillar-name { font-size: 13px; font-weight: 500; width: 155px; flex-shrink: 0; color: var(--text); }
+    .pillar-bar-wrap { flex: 1; }
+    .pillar-score { font-size: 13px; font-weight: 600; color: var(--navy); width: 44px; text-align: right; flex-shrink: 0; }
+    .pillar-max { font-size: 11px; color: var(--muted); }
+
+    .level-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 10px 18px;
+      border-radius: var(--r-sm);
+      font-family: var(--font-d);
+      font-size: 18px; font-weight: 700;
+    }
+    .level-1 { background: var(--success-bg); color: var(--success); }
+    .level-2 { background: var(--success-bg); color: #2D8A55; }
+    .level-3 { background: var(--gold-pale); color: var(--warn); }
+    .level-4 { background: var(--warn-bg); color: #9B5A00; }
+    .level-nc { background: var(--danger-bg); color: var(--danger); }
+
+    /* Score SVG ring */
+    .score-ring { display: flex; justify-content: center; margin-bottom: 16px; }
+
+    /* ── BeeBot chat ── */
+    .chat-wrap {
+      display: flex; flex-direction: column;
+      height: calc(100vh - 130px);
+      background: var(--white);
+      border: 1px solid var(--border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+    }
+    .chat-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .chat-avatar {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: var(--gold); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 17px;
+    }
+    .chat-name { font-weight: 600; font-size: 14px; color: var(--navy); }
+    .chat-status { font-size: 12px; color: var(--success); }
+
+    .chat-msgs {
+      flex: 1; overflow-y: auto;
+      padding: 20px; display: flex;
+      flex-direction: column; gap: 14px;
+    }
+    .msg-row { display: flex; align-items: flex-end; gap: 8px; }
+    .msg-row.user { flex-direction: row-reverse; }
+
+    .msg-bubble {
+      max-width: 72%; padding: 11px 15px;
+      border-radius: 16px;
+      font-size: 13.5px; line-height: 1.6;
+    }
+    .msg-bubble.bot {
+      background: var(--bg); color: var(--text);
+      border-bottom-left-radius: 4px;
+      border: 1px solid var(--border);
+    }
+    .msg-bubble.user {
+      background: var(--navy); color: var(--white);
+      border-bottom-right-radius: 4px;
+    }
+
+    .msg-mini-avatar {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--gold); display: flex;
+      align-items: center; justify-content: center;
+      font-size: 13px; flex-shrink: 0;
+    }
+
+    .chat-input-wrap {
+      padding: 14px 16px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px; align-items: center;
+    }
+    .chat-input {
+      flex: 1; padding: 10px 15px;
+      background: var(--bg);
+      border: 1.5px solid var(--border);
+      border-radius: 24px; font-size: 14px;
+      outline: none; transition: all var(--t);
+    }
+    .chat-input:focus {
+      border-color: var(--gold); background: var(--white);
+      box-shadow: 0 0 0 3px rgba(191,140,58,.12);
+    }
+
+    /* ── Document vault ── */
+    .doc-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 14px;
+    }
+    .doc-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 18px;
+      transition: all var(--t); cursor: pointer;
+    }
+    .doc-card:hover { border-color: var(--gold); box-shadow: var(--sh-md); }
+    .doc-icon { font-size: 28px; margin-bottom: 10px; }
+    .doc-name { font-size: 13px; font-weight: 500; color: var(--navy); margin-bottom: 4px; word-break: break-word; }
+    .doc-meta { font-size: 11.5px; color: var(--muted); }
+
+    .upload-zone {
+      border: 2px dashed var(--border-mid);
+      border-radius: var(--r-md); padding: 36px;
+      text-align: center; cursor: pointer;
+      transition: all var(--t); background: var(--bg);
+    }
+    .upload-zone:hover { border-color: var(--gold); background: var(--gold-pale); }
+    .upload-icon { font-size: 32px; margin-bottom: 10px; }
+    .upload-text { font-size: 14px; color: var(--text-mid); margin-bottom: 4px; }
+    .upload-hint { font-size: 12px; color: var(--muted); }
+
+    /* ── Verifier marketplace ── */
+    .verifier-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 16px;
+    }
+    .verifier-card {
+      background: var(--white); border: 1px solid var(--border);
+      border-radius: var(--r-md); padding: 20px;
+      transition: all var(--t);
+    }
+    .verifier-card:hover { box-shadow: var(--sh-md); border-color: var(--gold-light); }
+    .vc-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 12px; }
+    .vc-name { font-weight: 600; font-size: 14.5px; color: var(--navy); margin-bottom: 3px; }
+    .vc-city { font-size: 12px; color: var(--muted); }
+    .vc-rating { font-size: 13px; color: var(--warn); font-weight: 600; }
+    .vc-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+    .vc-tag {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 100px; padding: 2px 9px;
+      font-size: 11px; color: var(--text-mid);
+    }
+    .vc-desc { font-size: 13px; color: var(--text-mid); line-height: 1.5; margin-bottom: 14px; }
+
+    /* ── Tables ── */
+    .tbl-wrap { overflow-x: auto; border-radius: var(--r-md); border: 1px solid var(--border); }
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      background: var(--bg); padding: 11px 16px;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: .5px; text-transform: uppercase;
+      color: var(--muted); text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+    td {
+      padding: 13px 16px; font-size: 13.5px;
+      color: var(--text); border-bottom: 1px solid var(--bg);
+    }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+
+    /* ── Animations ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .fade { animation: fadeUp .35s var(--ease) both; }
+    .fade-1 { animation-delay: .04s; }
+    .fade-2 { animation-delay: .08s; }
+    .fade-3 { animation-delay: .12s; }
+    .fade-4 { animation-delay: .16s; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(255,255,255,.4);
+      border-top-color: white; border-radius: 50%;
+      animation: spin .55s linear infinite;
+    }
+    .spinner-gold {
+      width: 17px; height: 17px;
+      border: 2px solid rgba(191,140,58,.3);
+      border-top-color: var(--gold); border-radius: 50%;
+      animation: spin .55s linear infinite;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .dash-grid { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 768px) {
+      .sidebar {
+        position: fixed; left: -260px; top: 0; bottom: 0;
+        z-index: 50; transition: left .25s var(--ease);
+      }
+      .sidebar.open { left: 0; }
+      .overlay.open { display: block; }
+      .hamburger { display: flex; }
+      .topbar { padding: 0 14px; }
+      .page { padding: 18px 14px 80px; }
+      .mobile-nav { display: block; }
+      .stat-grid { grid-template-columns: 1fr 1fr; }
+      .auth-page { grid-template-columns: 1fr; }
+      .auth-left { display: none; }
+      .auth-right { padding: 40px 22px; }
+      .auth-box { max-width: 100%; }
+      .land-nav { padding: 0 18px; }
+      .land-nav-links { display: none; }
+      .land-hero { grid-template-columns: 1fr; padding: 48px 18px 60px; gap: 36px; }
+      .hero-visual { display: none; }
+      .land-section { padding: 56px 18px; }
+      .feat-grid { grid-template-columns: 1fr; }
+      .price-grid { grid-template-columns: 1fr; max-width: 360px; }
+      .verifier-grid { grid-template-columns: 1fr; }
+      .doc-grid { grid-template-columns: 1fr 1fr; }
+      .land-footer { padding: 36px 20px; }
+      .chat-wrap { height: calc(100vh - 120px); }
+    }
+
+    @media (max-width: 480px) {
+      .stat-grid { grid-template-columns: 1fr; }
+      .hero-cta { flex-direction: column; }
+      .doc-grid { grid-template-columns: 1fr; }
+      .page-title { font-size: 20px; }
+    }
+  `}</style>
 );
-const API = import.meta.env.VITE_API_URL || "http://localhost:8080";
 
-const apiFetch = async (path, opts={}, token=null) => {
-  const res = await fetch(`${API}${path}`, {
-    ...opts,
-    headers: { "Content-Type":"application/json", ...(token?{Authorization:`Bearer ${token}`}:{}), ...(opts.headers||{}) },
-    body: opts.body ? JSON.stringify(opts.body) : undefined,
-  });
-  if(opts.raw) return res;
-  return res.json();
-};
-
-/* ── DESIGN ───────────────────────────────────────────────── */
-const C = {
-  bg:"#F8FAFC", white:"#FFFFFF", border:"#E2E8F0",
-  ink:"#0F172A", mid:"#475569", muted:"#94A3B8",
-  s100:"#F1F5F9", s200:"#E2E8F0", s500:"#64748B", s700:"#334155", s900:"#0F172A",
-  amber:"#F59E0B", amberBg:"#FFFBEB", amberBdr:"#FDE68A", amberTxt:"#92400E",
-  green:"#15803D", greenBg:"#F0FDF4", red:"#B91C1C", redBg:"#FEF2F2",
-  copper:"#C4692A", copperLt:"#D4834A",
-};
-
-const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Sans:wght@300;400;500;600;700&display=swap');
-*{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:'DM Sans',sans-serif;background:${C.bg};color:${C.ink};-webkit-font-smoothing:antialiased;}
-input,button,select,textarea{font-family:'DM Sans',sans-serif;}
-::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:${C.border};border-radius:2px;}
-@keyframes up{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
-@keyframes in{from{opacity:0}to{opacity:1}}
-@keyframes spin{to{transform:rotate(360deg)}}
-@keyframes dot{0%,100%{opacity:.25;transform:scale(.8)}50%{opacity:1;transform:scale(1)}}
-@keyframes pulse{0%,100%{opacity:.7}50%{opacity:1}}
-input[type=range]{-webkit-appearance:none;width:100%;height:4px;border-radius:99px;background:${C.s200};outline:none;}
-input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:${C.ink};cursor:pointer;border:2px solid white;box-shadow:0 1px 4px #0002;}
-.serif{font-family:'Instrument Serif',serif;}
-`;
-
-/* ── PRIMITIVES ───────────────────────────────────────────── */
-const Card=({ch,p="20px",style:s={}})=>(<div style={{background:C.white,borderRadius:20,border:`1px solid ${C.border}`,boxShadow:"0 1px 8px #0F172A06",padding:p,...s}}>{ch}</div>);
-const Spin=({size=16,color="#fff"})=>(<div style={{width:size,height:size,border:`2.5px solid ${color}`,borderTopColor:"transparent",borderRadius:"50%",animation:"spin 1s linear infinite"}}/>);
-const Tag=({label,color=C.mid,bg=C.s100})=>(<span style={{fontSize:11,fontWeight:600,letterSpacing:.5,padding:"3px 10px",borderRadius:99,background:bg,color,border:`1px solid ${color}20`,whiteSpace:"nowrap"}}>{label}</span>);
-const Bar=({v,max,color=C.ink,h=5})=>(<div style={{height:h,background:C.s200,borderRadius:99,overflow:"hidden"}}><div style={{width:`${Math.min(v/max,1)*100}%`,height:"100%",background:color,borderRadius:99,transition:"width 1s ease"}}/></div>);
-
-const Btn=({ch,onClick,variant="solid",disabled,full,style:s={}})=>{
-  const vs={
-    solid:{background:C.ink,color:"#fff",border:"none"},
-    copper:{background:C.copper,color:"#fff",border:"none"},
-    outline:{background:"transparent",color:C.ink,border:`1.5px solid ${C.border}`},
-    ghost:{background:"transparent",color:C.mid,border:"none"},
-    danger:{background:"transparent",color:C.red,border:`1.5px solid ${C.red}30`},
-  };
-  return(<button onClick={disabled?undefined:onClick} style={{padding:"11px 22px",borderRadius:12,fontWeight:600,fontSize:14,cursor:disabled?"not-allowed":"pointer",opacity:disabled?.45:1,width:full?"100%":undefined,display:"inline-flex",alignItems:"center",justifyContent:"center",gap:6,transition:"opacity .15s",...vs[variant],...s}}>{ch}</button>);
-};
-
-const Input=({label,value,onChange,placeholder,type="text",hint})=>(<div style={{marginBottom:14}}>
-  {label&&<div style={{fontSize:12,fontWeight:600,color:C.muted,letterSpacing:.5,textTransform:"uppercase",marginBottom:5}}>{label}</div>}
-  {hint&&<div style={{fontSize:12,color:C.muted,marginBottom:5}}>{hint}</div>}
-  <input type={type} value={value} onChange={e=>onChange(type==="number"?Number(e.target.value):e.target.value)} placeholder={placeholder}
-    style={{width:"100%",padding:"11px 14px",border:`1.5px solid ${C.border}`,borderRadius:10,fontSize:14,color:C.ink,background:C.bg,outline:"none"}}/>
-</div>);
-
-const Disclaimer=()=>(<div style={{borderRadius:14,border:`1px solid ${C.amberBdr}`,background:C.amberBg,padding:"14px 16px",display:"flex",gap:10}}>
-  <span style={{color:C.amber,fontSize:15,flexShrink:0}}>⚠</span>
-  <p style={{fontSize:13,lineHeight:1.65,color:C.amberTxt}}>BEEcompass provides pre-readiness estimates only. This is NOT an official B-BBEE verification outcome and carries no legal weight. Only a SANAS-accredited verification agency may issue an official B-BBEE certificate. Always consult a qualified BEE practitioner for formal compliance advice.</p>
-</div>);
-
-/* ── BEE ENGINE ───────────────────────────────────────────── */
-const PILLARS=[
-  {key:"own",    label:"Ownership",                    max:25, color:"#7C3AED"},
-  {key:"mgmt",   label:"Management Control",           max:19, color:C.ink},
-  {key:"skills", label:"Skills Development",           max:20, color:C.green},
-  {key:"esd",    label:"Enterprise & Supplier Dev",    max:40, color:C.copper},
-  {key:"sed",    label:"Socio-Economic Dev",            max:5,  color:C.red},
+/* ─── Constants ─────────────────────────────────────────────── */
+const PILLARS = [
+  { name: "Ownership", score: 18, max: 25, pct: 72 },
+  { name: "Management Control", score: 11, max: 19, pct: 58 },
+  { name: "Skills Development", score: 15, max: 20, pct: 75 },
+  { name: "Enterprise & Supplier Dev", score: 22, max: 40, pct: 55 },
+  { name: "Socio-Economic Dev", score: 4, max: 5, pct: 80 },
 ];
-const ELEMENTS=[
-  {id:"own",max:25,fields:[{id:"blackOwn",max:100,pts:20},{id:"blackWomen",max:100,pts:5}]},
-  {id:"mgmt",max:19,fields:[{id:"board",max:100,pts:5},{id:"exec",max:100,pts:5},{id:"senior",max:100,pts:5},{id:"middle",max:100,pts:4}]},
-  {id:"skills",max:20,fields:[{id:"trainPct",max:6,pts:8},{id:"learners",max:5,pts:7},{id:"bursaries",max:20,pts:5}]},
-  {id:"esd",max:40,fields:[{id:"beeProc",max:100,pts:15},{id:"blackSpend",max:100,pts:12},{id:"supDev",max:3,pts:10},{id:"entDev",max:3,pts:5}]},
-  {id:"sed",max:5,fields:[{id:"sedPct",max:1,pts:5}]},
-];
-const calcEl=(el,v)=>Math.min(el.fields.reduce((s,f)=>s+(Math.min(parseFloat(v[f.id]||0),f.max)/f.max)*f.pts,0),el.max);
-const getLevel=s=>{
-  if(s>=100)return{n:1,label:"Level 1",rec:"135%",clr:C.green};
-  if(s>=95) return{n:2,label:"Level 2",rec:"125%",clr:"#1A9E50"};
-  if(s>=90) return{n:3,label:"Level 3",rec:"110%",clr:"#22C55E"};
-  if(s>=80) return{n:4,label:"Level 4",rec:"100%",clr:C.amber};
-  if(s>=75) return{n:5,label:"Level 5",rec:"80%", clr:C.copper};
-  if(s>=70) return{n:6,label:"Level 6",rec:"60%", clr:"#B45309"};
-  if(s>=55) return{n:7,label:"Level 7",rec:"50%", clr:"#92400E"};
-  if(s>=40) return{n:8,label:"Level 8",rec:"10%", clr:C.red};
-  return        {n:9,label:"Non-Compliant",rec:"0%",clr:C.red};
-};
-const DVALS=Object.fromEntries(ELEMENTS.flatMap(e=>e.fields.map(f=>[f.id,""])));
 
-/* ═══════════════════════════════════════════════════════════
-   MARKETING SITE
-═══════════════════════════════════════════════════════════ */
-function MarketingSite({onSignUp,onSignIn}) {
-  const [mPage,setMPage]=useState("home");
-  return(
-    <div style={{minHeight:"100vh",background:C.bg}}>
+const VERIFIERS = [
+  { name: "EmpowerLogic", city: "Johannesburg", rating: "4.8", specialities: ["Generic Scorecard","QSE","EME"], desc: "SA's largest BEE verification agency with over 20 years of experience." },
+  { name: "Honeycomb BEE Ratings", city: "Cape Town", rating: "4.6", specialities: ["QSE","EME","Tourism"], desc: "Specialist SME verifier with fast turnaround and online document portal." },
+  { name: "Nkosi Advisory", city: "Durban", rating: "4.5", specialities: ["Generic","Mining","Construction"], desc: "Sector-specific expertise across mining and construction codes." },
+  { name: "MDI Consulting", city: "Sandton", rating: "4.7", specialities: ["FSC","Generic","QSE"], desc: "Financial Services sector specialists with strong JSE-listed client base." },
+  { name: "SERR Synergy", city: "Pretoria", rating: "4.4", specialities: ["QSE","EME","Agri"], desc: "Affordable SME packages with dedicated relationship managers." },
+  { name: "Ubuntu Rating Agency", city: "Durban", rating: "4.6", specialities: ["Generic","ICT","Media"], desc: "ICT & media sector specialists, SANAS accredited with ISO 17020 certification." },
+];
+
+const FAQS = [
+  { q: "Is BEEcompass SANAS accredited?", a: "No. BEEcompass is a pre-readiness and planning tool. We help you prepare for verification — we are not a verification body. Official B-BBEE certificates must be issued by a SANAS-accredited verification agency." },
+  { q: "How accurate is the score estimate?", a: "Our calculator uses the latest generic scorecard codes. Scores are indicative estimates only and may differ from official verification results depending on your sector and specific circumstances." },
+  { q: "Can I use BEEcompass as an official certificate?", a: "No. Reports generated by BEEcompass are internal planning documents only and have no legal standing as official B-BBEE certificates." },
+];
+
+/* ─── Small shared components ──────────────────────────────── */
+const ScoreRing = ({ score, size = 130, stroke = 10 }) => {
+  const r = (size - stroke) / 2;
+  const circ = 2 * Math.PI * r;
+  const pct = Math.min(score / 115, 1);
+  const offset = circ * (1 - pct);
+  const level = score >= 100 ? 1 : score >= 85 ? 2 : score >= 75 ? 3 : score >= 65 ? 4 : "NC";
+  const colors = { 1: "#1F6B40", 2: "#2D8A55", 3: "#BF8C3A", 4: "#E07B39", NC: "#B03020" };
+  const color = colors[level];
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ transform: "rotate(-90deg)" }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke="#F0EFEB" strokeWidth={stroke} />
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color}
+          strokeWidth={stroke} strokeLinecap="round"
+          strokeDasharray={circ} strokeDashoffset={offset}
+          style={{ transition: "stroke-dashoffset 1s cubic-bezier(.4,0,.2,1)" }}
+        />
+      </svg>
+      <div style={{ marginTop: -size * 0.72, textAlign: "center", pointerEvents: "none" }}>
+        <div style={{ fontFamily: "var(--font-d)", fontSize: size * 0.28, fontWeight: 700, color: "var(--navy)", lineHeight: 1 }}>{score}</div>
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>/ 115 pts</div>
+      </div>
+      <div style={{ marginTop: 56 }} />
+    </div>
+  );
+};
+
+const ProgBar = ({ pct, variant }) => {
+  const cls = pct >= 70 ? "good" : pct >= 45 ? "" : "low";
+  return (
+    <div className="prog-wrap">
+      <div className={`prog-fill ${cls}`} style={{ width: `${pct}%` }} />
+    </div>
+  );
+};
+
+/* ─── Landing Page ──────────────────────────────────────────── */
+const LandingPage = ({ onAuth }) => {
+  const [openFaq, setOpenFaq] = useState(null);
+  return (
+    <div className="land">
       {/* Nav */}
-      <nav style={{position:"sticky",top:0,zIndex:100,background:C.white+"F0",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,padding:"14px 40px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8,cursor:"pointer"}} onClick={()=>setMPage("home")}>
-          <div style={{width:32,height:32,borderRadius:9,background:`linear-gradient(135deg,${C.copper},${C.copperLt})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16}}>🧭</div>
-          <span style={{fontFamily:"'Instrument Serif'",fontSize:22,fontWeight:400,color:C.ink}}>BEE<span style={{color:C.copper}}>compass</span></span>
+      <nav className="land-nav">
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div className="al-logo-mark" style={{ width: 30, height: 30, fontSize: 15 }}>B</div>
+          <span style={{ fontFamily: "var(--font-d)", fontSize: 18, fontWeight: 700 }}>
+            <span style={{ color: "var(--navy)" }}>BEE</span>
+            <span style={{ color: "var(--gold)" }}>compass</span>
+          </span>
         </div>
-        <div style={{display:"flex",gap:8,alignItems:"center"}}>
-          {[["home","Home"],["about","About BEE"],["how","How It Works"],["pricing","Pricing"]].map(([p,l])=>(
-            <button key={p} onClick={()=>setMPage(p)} style={{padding:"8px 14px",borderRadius:10,border:"none",background:mPage===p?C.s100:"transparent",color:mPage===p?C.ink:C.mid,fontWeight:500,fontSize:14,cursor:"pointer"}}>{l}</button>
+        <div className="land-nav-links">
+          {["Features", "How It Works", "Pricing", "About BEE"].map(l => (
+            <button key={l} className="land-nav-link">{l}</button>
           ))}
-          <div style={{width:1,height:24,background:C.border,margin:"0 4px"}}/>
-          <Btn ch="Sign In" variant="outline" onClick={onSignIn} style={{padding:"8px 16px",fontSize:14,borderRadius:10}}/>
-          <Btn ch="Get Started Free" variant="copper" onClick={onSignUp} style={{padding:"8px 18px",fontSize:14,borderRadius:10}}/>
+        </div>
+        <div className="land-nav-actions">
+          <button className="btn btn-ghost" onClick={() => onAuth("signin")}>Sign In</button>
+          <button className="btn btn-primary" onClick={() => onAuth("signup")}>Start Free →</button>
         </div>
       </nav>
 
-      {mPage==="home"    && <HomePage onSignUp={onSignUp}/>}
-      {mPage==="about"   && <AboutBEE/>}
-      {mPage==="how"     && <HowItWorks onSignUp={onSignUp}/>}
-      {mPage==="pricing" && <PricingPage onSignUp={onSignUp}/>}
-
-      {/* Footer */}
-      <footer style={{background:C.ink,padding:"40px",marginTop:60}}>
-        <div style={{maxWidth:1100,margin:"0 auto",display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
+      {/* Hero */}
+      <section>
+        <div className="land-hero">
           <div>
-            <div style={{fontFamily:"'Instrument Serif'",fontSize:20,color:"#fff",marginBottom:6}}>BEE<span style={{color:C.copper}}>compass</span></div>
-            <p style={{fontSize:13,color:"#64748B",lineHeight:1.6,maxWidth:360}}>Pre-readiness planning tool for South African SMEs. Not an accredited BEE verification service.</p>
+            <div className="hero-eyebrow">🇿🇦 South African Compliance Tool</div>
+            <h1 className="hero-h">
+              Know your <span>B-BBEE score</span> before the verifier does
+            </h1>
+            <p className="hero-p">
+              BEEcompass gives SMEs a clear, actionable picture of their B-BBEE standing — so you walk into verification fully prepared, not guessing.
+            </p>
+            <div className="hero-cta">
+              <button className="btn btn-primary btn-lg" onClick={() => onAuth("signup")}>Start Free — No card needed</button>
+              <button className="btn btn-outline btn-lg" onClick={() => onAuth("signin")}>Sign In</button>
+            </div>
+            <div className="hero-trust">
+              <span>POPIA compliant</span>
+              <div className="trust-dot" />
+              <span>Pre-readiness only</span>
+              <div className="trust-dot" />
+              <span>Not a verification body</span>
+            </div>
           </div>
-          <div style={{fontSize:12,color:"#475569",textAlign:"right"}}>
-            <p>© 2025 BEEcompass · Made in 🇿🇦 South Africa</p>
-            <p style={{marginTop:4}}>Not SANAS accredited · For planning purposes only</p>
+
+          <div className="hero-visual fade">
+            <div className="hv-score-ring">
+              <div className="hv-score-inner">
+                <div className="hv-score-num">72</div>
+                <div className="hv-score-label">Level 3 · QSE</div>
+              </div>
+            </div>
+            <div className="hv-pillars">
+              {[
+                ["Ownership", 72],
+                ["Management Control", 58],
+                ["Skills Development", 75],
+                ["Enterprise & Supplier Dev", 55],
+                ["Socio-Economic Dev", 80],
+              ].map(([n, p]) => (
+                <div key={n} className="hv-pillar">
+                  <div className="hv-pillar-name">{n}</div>
+                  <div className="hv-pillar-bar">
+                    <div className="hv-pillar-fill" style={{ width: `${p}%` }} />
+                  </div>
+                  <div className="hv-pillar-pct">{p}%</div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
+      </section>
+
+      {/* Stats bar */}
+      <div style={{ background: "var(--navy)", padding: "28px 40px" }}>
+        <div style={{ maxWidth: 1160, margin: "0 auto", display: "flex", justifyContent: "space-around", flexWrap: "wrap", gap: 24 }}>
+          {[["5 pillars", "Analysed in detail"], ["25 questions", "Structured questionnaire"], ["8 real verifiers", "SA marketplace"], ["POPIA", "Compliant & secure"]].map(([v, l]) => (
+            <div key={v} style={{ textAlign: "center" }}>
+              <div style={{ fontFamily: "var(--font-d)", fontSize: 24, fontWeight: 700, color: "var(--gold)", marginBottom: 3 }}>{v}</div>
+              <div style={{ fontSize: 12.5, color: "rgba(255,255,255,.45)" }}>{l}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Features */}
+      <section className="land-section alt">
+        <div className="sec-header">
+          <div className="sec-eye">What BEEcompass does</div>
+          <h2 className="sec-h">Everything you need to prepare for verification</h2>
+          <p className="sec-p">From questionnaire to gap analysis — we guide you through the entire pre-readiness process.</p>
+        </div>
+        <div className="feat-grid">
+          {[
+            ["📊", "Live Score Calculator", "Input your data field by field. See your score update in real time across all 5 pillars."],
+            ["🎯", "Gap Analysis", "Pinpoint exactly what's holding your score back and get priority actions per pillar."],
+            ["🔄", "Scenario Planner", "Model future improvements with live sliders. See what it takes to move to the next level."],
+            ["🤖", "BeeBot AI Assistant", "Ask any B-BBEE question in plain language. Claude-powered, BEE-topics only."],
+            ["📁", "Document Vault", "Upload and organise your supporting documents with AI-assisted type detection."],
+            ["🏢", "Verifier Marketplace", "Browse and book from 8 real SANAS-accredited verification agencies across SA."],
+            ["📄", "Pre-Readiness Report", "Generate a professional PDF summary ready to share with your verifier."],
+            ["📚", "BEE Knowledge Base", "Understand the codes with plain-language explanations of every element."],
+          ].map(([icon, title, desc]) => (
+            <div key={title} className="feat-card fade">
+              <div className="feat-icon">{icon}</div>
+              <div className="feat-title">{title}</div>
+              <div className="feat-desc">{desc}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* How it works */}
+      <section className="land-section">
+        <div className="sec-header">
+          <div className="sec-eye">How it works</div>
+          <h2 className="sec-h">Prepared in 3 steps</h2>
+        </div>
+        <div style={{ maxWidth: 800, margin: "0 auto", display: "flex", flexDirection: "column", gap: 0 }}>
+          {[
+            ["01", "Complete the questionnaire", "Answer 25 structured questions about your business. Takes about 15 minutes."],
+            ["02", "Review your score & gaps", "See your estimated B-BBEE level, pillar breakdown, and priority improvement areas."],
+            ["03", "Book a verified agency", "When you're ready, connect with a SANAS-accredited verifier from our marketplace."],
+          ].map(([num, title, desc], i) => (
+            <div key={num} style={{ display: "flex", gap: 24, padding: "24px 0", borderBottom: i < 2 ? "1px solid var(--border)" : "none" }}>
+              <div style={{ fontFamily: "var(--font-d)", fontSize: 40, fontWeight: 700, color: "var(--gold-pale)", lineHeight: 1, flexShrink: 0, width: 56 }}>{num}</div>
+              <div>
+                <div style={{ fontFamily: "var(--font-d)", fontSize: 19, fontWeight: 600, color: "var(--navy)", marginBottom: 6 }}>{title}</div>
+                <div style={{ fontSize: 14.5, color: "var(--text-mid)", lineHeight: 1.7 }}>{desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Pricing */}
+      <section className="land-section alt">
+        <div className="sec-header">
+          <div className="sec-eye">Simple pricing</div>
+          <h2 className="sec-h">No hidden costs. No surprises.</h2>
+        </div>
+        <div className="price-grid">
+          {[
+            { plan: "Free", price: "R0", per: "forever", featured: false,
+              feats: [["Dashboard & score estimate", true], ["25-question questionnaire", true], ["Gap analysis summary", true], ["Pre-readiness report PDF", false], ["Scenario planner", false], ["Document vault", false]] },
+            { plan: "Report", price: "R299", per: "once-off", featured: false,
+              feats: [["Everything in Free", true], ["Full pre-readiness report PDF", true], ["Verifier marketplace access", true], ["Scenario planner", false], ["Document vault (1 GB)", false]] },
+            { plan: "Annual", price: "R1,299", per: "per year", featured: true,
+              feats: [["Everything in Report", true], ["Unlimited PDF reports", true], ["Scenario planner", true], ["Document vault (10 GB)", true], ["Priority BeeBot support", true]] },
+            { plan: "Enterprise", price: "Custom", per: "contact us", featured: false,
+              feats: [["Multi-company dashboard", true], ["White-label reports", true], ["API access", true], ["Dedicated account manager", true], ["Custom integrations", true]] },
+          ].map(({ plan, price, per, featured, feats }) => (
+            <div key={plan} className={`price-card${featured ? " feat" : ""}`}>
+              {featured && <div className="price-badge">Most Popular</div>}
+              <div className="price-plan">{plan}</div>
+              <div className="price-val">{price !== "Custom" ? <><span>R</span>{price.replace("R","")}</> : "Custom"}</div>
+              <div className="price-per">{per}</div>
+              <ul className="price-feats">
+                {feats.map(([f, y]) => (
+                  <li key={f}>
+                    <span className={y ? "pf-y" : "pf-n"}>{y ? "✓" : "–"}</span>
+                    <span style={{ color: y ? "var(--text-mid)" : "var(--muted)" }}>{f}</span>
+                  </li>
+                ))}
+              </ul>
+              <button
+                className={`btn btn-full ${featured ? "btn-primary" : "btn-outline"}`}
+                onClick={() => onAuth("signup")}
+              >
+                {plan === "Enterprise" ? "Contact Us" : "Get Started"}
+              </button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* FAQ */}
+      <section className="land-section">
+        <div className="sec-header">
+          <div className="sec-eye">Common questions</div>
+          <h2 className="sec-h">Frequently Asked Questions</h2>
+        </div>
+        <div style={{ maxWidth: 680, margin: "0 auto", display: "flex", flexDirection: "column", gap: 0 }}>
+          {FAQS.map((faq, i) => (
+            <div key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+              <button
+                onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                style={{
+                  width: "100%", textAlign: "left", background: "none", border: "none",
+                  padding: "18px 0", cursor: "pointer", display: "flex",
+                  justifyContent: "space-between", alignItems: "center", gap: 16
+                }}
+              >
+                <span style={{ fontWeight: 500, color: "var(--navy)", fontSize: 15 }}>{faq.q}</span>
+                <span style={{ color: "var(--muted)", fontSize: 20, flexShrink: 0, lineHeight: 1 }}>{openFaq === i ? "−" : "+"}</span>
+              </button>
+              {openFaq === i && (
+                <div style={{ paddingBottom: 18, fontSize: 14, color: "var(--text-mid)", lineHeight: 1.7 }}>{faq.a}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* CTA Banner */}
+      <div style={{ background: "var(--navy)", padding: "64px 40px", textAlign: "center" }}>
+        <div style={{ fontFamily: "var(--font-d)", fontSize: "clamp(26px,3vw,36px)", fontWeight: 700, color: "var(--white)", marginBottom: 14 }}>
+          Ready to know where you stand?
+        </div>
+        <p style={{ fontSize: 15.5, color: "rgba(255,255,255,.55)", marginBottom: 28, maxWidth: 480, margin: "0 auto 28px" }}>
+          Create a free account and complete your first score estimate in under 20 minutes.
+        </p>
+        <button className="btn btn-primary btn-lg" onClick={() => onAuth("signup")}>Start Free →</button>
+      </div>
+
+      {/* Footer */}
+      <footer className="land-footer">
+        <div className="land-footer-logo">
+          <span style={{ color: "var(--white)" }}>BEE</span>
+          <span style={{ color: "var(--gold)" }}>compass</span>
+        </div>
+        <p>
+          BEEcompass is a pre-readiness planning tool. It is not a SANAS-accredited verification body<br />
+          and does not issue official B-BBEE certificates. All scores are indicative estimates only.<br />
+          <br />
+          © {new Date().getFullYear()} BEEcompass · POPIA Compliant · South Africa
+        </p>
       </footer>
     </div>
   );
-}
+};
 
-function HomePage({onSignUp}){
-  return(<div style={{maxWidth:1100,margin:"0 auto",padding:"0 40px"}}>
-    {/* Hero */}
-    <div style={{textAlign:"center",padding:"80px 0 60px",animation:"up .5s ease"}}>
-      <span style={{fontSize:13,fontWeight:600,letterSpacing:1,textTransform:"uppercase",color:C.copper,background:C.amberBg,padding:"5px 14px",borderRadius:99,border:`1px solid ${C.amberBdr}`}}>BEE Pre-Readiness · Not Verification</span>
-      <h1 className="serif" style={{fontSize:58,lineHeight:1.1,letterSpacing:-1,marginTop:20,color:C.ink}}>
-        Know your BEE position<br/>
-        <span style={{color:C.copper,fontStyle:"italic"}}>before</span> you book a verifier.
-      </h1>
-      <p style={{fontSize:18,lineHeight:1.7,color:C.mid,marginTop:20,maxWidth:580,margin:"20px auto 0"}}>
-        BEEcompass helps South African SMEs understand their estimated B-BBEE readiness, identify gaps, compile documents, and prepare a handoff pack for their SANAS-accredited verifier.
-      </p>
-      <div style={{display:"flex",gap:12,justifyContent:"center",marginTop:32}}>
-        <Btn ch="Start Free — No Card Required →" variant="copper" onClick={onSignUp} style={{padding:"14px 28px",fontSize:16,borderRadius:14,boxShadow:`0 6px 24px ${C.copper}35`}}/>
-        <Btn ch="See how it works" variant="outline" onClick={()=>{}} style={{padding:"14px 24px",fontSize:16,borderRadius:14}}/>
-      </div>
-      <p style={{fontSize:12,color:C.muted,marginTop:14}}>Free readiness estimate · No SANAS accreditation · For planning only</p>
-    </div>
+/* ─── Auth Page ─────────────────────────────────────────────── */
+const AuthPage = ({ initialTab = "signup", onSuccess, onBack }) => {
+  const [tab, setTab] = useState(initialTab);
+  const [form, setForm] = useState({ name: "", company: "", email: "", password: "" });
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
 
-    {/* Stats */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:60}}>
-      {[["750K+","SMEs in SA need BEE"],["R0","to get your estimate"],["5 min","to complete assessment"],["100%","you own your documents"]].map(([v,l])=>(
-        <Card key={l} ch={<div style={{textAlign:"center"}}><p className="serif" style={{fontSize:36,color:C.ink}}>{v}</p><p style={{fontSize:14,color:C.mid,marginTop:4}}>{l}</p></div>} p="24px"/>
-      ))}
-    </div>
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
 
-    {/* Features */}
-    <div style={{marginBottom:60}}>
-      <h2 className="serif" style={{fontSize:38,textAlign:"center",marginBottom:8}}>Everything you need to prepare</h2>
-      <p style={{fontSize:16,color:C.mid,textAlign:"center",marginBottom:36}}>We handle the preparation. Your accredited verifier handles the certificate.</p>
-      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
-        {[
-          ["🧮","BEE Readiness Calculator","Estimate your position across all 5 pillars instantly. Updated as you enter data."],
-          ["📋","Guided Questionnaire","25 BEE-specific questions guide you through what your verifier will assess."],
-          ["📁","Document Vault","Upload and categorise all required documents. The system detects types using AI."],
-          ["🤖","BeeBot AI Advisor","Ask any BEE question. BeeBot is trained exclusively on South African BEE legislation."],
-          ["🔍","Gap Analysis","See exactly which pillars need work and what actions to take — in plain language."],
-          ["🤝","Verifier Marketplace","Browse and book real SANAS-accredited verification agencies, advisory firms, and consultants."],
-          ["📊","Scenario Planner","Model improvements before spending money. See how changes affect your estimated level."],
-          ["📄","Pre-Readiness Report","Generate a PDF readiness pack to hand to your verifier — saves them time and you money."],
-          ["🔒","POPIA Compliant","Your data is private, encrypted, and never shared without your consent."],
-        ].map(([icon,title,desc])=>(
-          <Card key={title} ch={<div>
-            <div style={{width:44,height:44,borderRadius:12,background:C.s100,display:"flex",alignItems:"center",justifyContent:"center",fontSize:22,marginBottom:14}}>{icon}</div>
-            <p style={{fontWeight:700,fontSize:15,marginBottom:8}}>{title}</p>
-            <p style={{fontSize:14,color:C.mid,lineHeight:1.6}}>{desc}</p>
-          </div>} p="24px"/>
-        ))}
-      </div>
-    </div>
+  const submit = async () => {
+    setErr(""); setLoading(true);
+    if (tab === "signup" && (!form.name || !form.company || !form.email || !form.password)) {
+      setErr("Please fill in all fields."); setLoading(false); return;
+    }
+    if (tab === "signin" && (!form.email || !form.password)) {
+      setErr("Please enter your email and password."); setLoading(false); return;
+    }
+    try {
+      const endpoint = tab === "signup" ? "/auth/register" : "/auth/login";
+      const body = tab === "signup"
+        ? { name: form.name, company: form.company, email: form.email, password: form.password }
+        : { email: form.email, password: form.password };
 
-    {/* CTA */}
-    <div style={{background:C.ink,borderRadius:24,padding:"48px",textAlign:"center",marginBottom:60}}>
-      <h2 className="serif" style={{fontSize:38,color:"#fff",marginBottom:12}}>Ready to know where you stand?</h2>
-      <p style={{fontSize:16,color:"#94A3B8",marginBottom:28,maxWidth:480,margin:"0 auto 28px"}}>Start your free readiness assessment today. No credit card, no SANAS accreditation — just clarity.</p>
-      <Btn ch="Start Free Assessment →" variant="copper" onClick={onSignUp} style={{padding:"14px 32px",fontSize:16,borderRadius:14}}/>
-    </div>
+      const res = await fetch(`${API_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-    <Disclaimer/>
-  </div>);
-}
+      const text = await res.text();
+      let data;
+      try { data = JSON.parse(text); }
+      catch { throw new Error("Server error — please try again shortly."); }
 
-function AboutBEE(){
-  const sections=[
-    {title:"What is B-BBEE?",content:"Broad-Based Black Economic Empowerment (B-BBEE) is a South African government policy introduced through the B-BBEE Act 53 of 2003. It aims to redress historical economic inequalities by promoting the participation of Black South Africans in the economy through ownership, management, skills development, and supplier development."},
-    {title:"Who does it affect?",content:"B-BBEE applies to all businesses operating in South Africa that wish to do business with government entities, state-owned enterprises, or large corporates. While compliance is not legally mandatory for private businesses, non-compliance can significantly restrict access to contracts and funding."},
-    {title:"The Generic Scorecard",content:"The B-BBEE Generic Codes of Good Practice (2013) measure compliance across five elements: Ownership (25 pts), Management Control (19 pts), Skills Development (20 pts), Enterprise & Supplier Development (40 pts), and Socio-Economic Development (5 pts) — totalling 109 points maximum."},
-    {title:"EME and QSE Status",content:"Exempt Micro Enterprises (EMEs) with annual turnover below R10 million automatically qualify as Level 4 (or Level 1 if 100% Black-owned). Qualifying Small Enterprises (QSEs) with turnover between R10m and R50m use a simplified scorecard. Generic entities above R50m use the full scorecard."},
-    {title:"BEE Levels and Recognition",content:"B-BBEE levels range from Level 1 (best, 135% procurement recognition) to Level 8 (10% recognition). Non-compliant businesses receive 0% recognition. Levels are determined by your total scorecard points, and certificates are valid for 12 months from the verification date."},
-    {title:"The Verification Process",content:"Official BEE certificates must be issued by a SANAS-accredited verification agency. Businesses prepare their documentation, undergo an audit by the agency, and receive a rating certificate. This process typically costs R2,000–R15,000 depending on entity size and complexity."},
-    {title:"2025 Legislative Changes",content:"The Employment Equity Amendment Act (effective January 2025) introduced mandatory sectoral representation targets across 18 industries. These integrate with BEE Management Control scoring and require businesses to demonstrate equitable representation at all occupational levels through 2030."},
-    {title:"Common Mistakes to Avoid",content:"Fronting (misrepresenting BEE status) is illegal and carries severe penalties. Other common mistakes include failing to renew certificates annually, using incorrect sector codes, poor document keeping, and not understanding sub-minimum requirements on priority elements."},
-  ];
-  return(<div style={{maxWidth:900,margin:"0 auto",padding:"60px 40px",animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:10}}>Knowledge Base</p>
-    <h1 className="serif" style={{fontSize:44,marginBottom:8}}>Understanding B-BBEE</h1>
-    <p style={{fontSize:16,color:C.mid,marginBottom:40,lineHeight:1.7}}>A plain-language guide to South Africa's Broad-Based Black Economic Empowerment framework — what it is, how it works, and what it means for your business.</p>
-    <Disclaimer/>
-    <div style={{marginTop:32,display:"flex",flexDirection:"column",gap:24}}>
-      {sections.map((s,i)=>(
-        <Card key={s.title} ch={<div>
-          <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-            <div style={{width:32,height:32,borderRadius:8,background:C.ink,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",fontSize:14,fontWeight:700,flexShrink:0,marginTop:2}}>{i+1}</div>
-            <div><h3 style={{fontSize:18,fontWeight:700,marginBottom:8}}>{s.title}</h3><p style={{fontSize:15,color:C.mid,lineHeight:1.7}}>{s.content}</p></div>
-          </div>
-        </div>} p="24px"/>
-      ))}
-    </div>
-  </div>);
-}
-
-function HowItWorks({onSignUp}){
-  const steps=[
-    {n:"01",title:"Create your account",desc:"Sign up free. No credit card required. Complete your company profile with basic details.",icon:"👤"},
-    {n:"02",title:"Complete the questionnaire",desc:"Answer 25 BEE-specific questions about your ownership, management, skills, procurement, and SED spend.",icon:"📋"},
-    {n:"03",title:"Upload your documents",desc:"Upload your supporting documents. Our AI categorises them automatically and flags what's missing.",icon:"📁"},
-    {n:"04",title:"Review your readiness",desc:"See your estimated BEE level range, confidence score, and gap analysis across all 5 pillars.",icon:"📊"},
-    {n:"05",title:"Run scenarios",desc:"Model improvements before spending money. See how ownership changes or supplier shifts affect your estimate.",icon:"🔧"},
-    {n:"06",title:"Generate your readiness report",desc:"Download a PDF pre-readiness pack — a professional summary for your verifier that saves them time.",icon:"📄"},
-    {n:"07",title:"Book an accredited verifier",desc:"Browse real SANAS-accredited agencies. Book directly through BEEcompass and hand over your readiness pack.",icon:"🤝"},
-  ];
-  return(<div style={{maxWidth:900,margin:"0 auto",padding:"60px 40px",animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:10}}>The Process</p>
-    <h1 className="serif" style={{fontSize:44,marginBottom:8}}>How BEEcompass Works</h1>
-    <p style={{fontSize:16,color:C.mid,marginBottom:40,lineHeight:1.7}}>From zero to verification-ready in seven simple steps.</p>
-    <div style={{display:"flex",flexDirection:"column",gap:16}}>
-      {steps.map((s,i)=>(
-        <div key={s.n} style={{display:"flex",gap:20,alignItems:"flex-start",padding:"24px",background:C.white,borderRadius:16,border:`1px solid ${C.border}`,animation:`up .4s ease ${i*.05}s both`}}>
-          <div style={{fontSize:32,flexShrink:0}}>{s.icon}</div>
-          <div style={{flex:1}}>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:6}}>
-              <span style={{fontSize:11,fontWeight:700,letterSpacing:1,color:C.muted}}>{s.n}</span>
-              <h3 style={{fontSize:18,fontWeight:700}}>{s.title}</h3>
-            </div>
-            <p style={{fontSize:15,color:C.mid,lineHeight:1.6}}>{s.desc}</p>
-          </div>
-        </div>
-      ))}
-    </div>
-    <div style={{marginTop:40,textAlign:"center"}}>
-      <Btn ch="Start Now — It's Free →" variant="copper" onClick={onSignUp} style={{padding:"14px 32px",fontSize:16,borderRadius:14}}/>
-    </div>
-  </div>);
-}
-
-function PricingPage({onSignUp}){
-  const plans=[
-    {name:"Free",price:"R0",per:"forever",desc:"Get your estimated BEE readiness position",features:["Basic readiness estimate","Questionnaire (10 questions)","Gap analysis overview","BeeBot AI (10 messages/month)"],cta:"Start Free",variant:"outline"},
-    {name:"Report",price:"R299",per:"one-time",desc:"Download your full pre-readiness report",features:["Everything in Free","Full questionnaire (25 questions)","Document vault (up to 20 files)","Unlimited BeeBot AI","PDF pre-readiness report","Scenario planner"],cta:"Get Report",variant:"copper",featured:true},
-    {name:"Annual",price:"R1,299",per:"per year",desc:"Year-round readiness tracking",features:["Everything in Report","Unlimited documents","Quarterly score tracking","WhatsApp deadline reminders","Priority support","Multi-year comparison"],cta:"Go Annual",variant:"solid"},
-    {name:"Verification Assist",price:"Custom",per:"",desc:"Managed handoff to accredited verifiers",features:["Everything in Annual","Agency matching","Managed booking","Verifier briefing call","Readiness pack preparation","Compliance check"],cta:"Contact Us",variant:"outline"},
-  ];
-  return(<div style={{maxWidth:1100,margin:"0 auto",padding:"60px 40px",animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,textAlign:"center",marginBottom:10}}>Pricing</p>
-    <h1 className="serif" style={{fontSize:44,textAlign:"center",marginBottom:8}}>Simple, transparent pricing</h1>
-    <p style={{fontSize:16,color:C.mid,textAlign:"center",marginBottom:40}}>Start free. Pay only when you need more.</p>
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:16,marginBottom:40}}>
-      {plans.map(p=>(
-        <div key={p.name} style={{background:p.featured?C.ink:C.white,borderRadius:20,border:p.featured?`2px solid ${C.copper}`:`1px solid ${C.border}`,padding:"24px",position:"relative"}}>
-          {p.featured&&<div style={{position:"absolute",top:-12,left:"50%",transform:"translateX(-50%)",background:C.copper,color:"#fff",fontSize:11,fontWeight:700,padding:"3px 14px",borderRadius:99,letterSpacing:.5}}>MOST POPULAR</div>}
-          <p style={{fontWeight:700,fontSize:16,color:p.featured?"#fff":C.ink,marginBottom:4}}>{p.name}</p>
-          <p style={{fontFamily:"'Instrument Serif'",fontSize:32,color:p.featured?C.amber:C.ink,marginBottom:2}}>{p.price}</p>
-          <p style={{fontSize:12,color:p.featured?"#64748B":C.muted,marginBottom:12}}>{p.per}</p>
-          <p style={{fontSize:13,color:p.featured?"#94A3B8":C.mid,marginBottom:16,lineHeight:1.5}}>{p.desc}</p>
-          <div style={{marginBottom:20}}>{p.features.map(f=>(<div key={f} style={{display:"flex",gap:8,marginBottom:8,fontSize:13,color:p.featured?"#CBD5E1":C.s700}}>
-            <span style={{color:p.featured?C.amber:C.green}}>✓</span>{f}
-          </div>))}</div>
-          <Btn ch={p.cta} variant={p.featured?"copper":p.variant} onClick={onSignUp} full style={{borderRadius:12,fontSize:14}}/>
-        </div>
-      ))}
-    </div>
-    <Disclaimer/>
-  </div>);
-}
-
-/* ═══════════════════════════════════════════════════════════
-   AUTH
-═══════════════════════════════════════════════════════════ */
-function Auth({mode:initMode="signup",onAuth,onBack}){
-  const [mode,setMode]=useState(initMode);
-  const [f,setF]=useState({name:"",company:"",email:"",pw:""});
-  const [loading,setLoading]=useState(false);
-  const [error,setError]=useState("");
-  const set=(k,v)=>setF(p=>({...p,[k]:v}));
-
-  const submit=async()=>{
-    setLoading(true);setError("");
-    try{
-      if(mode==="signup"){
-        const {error:e}=await sb.auth.signUp({email:f.email,password:f.pw,options:{data:{name:f.name,company:f.company}}});
-        if(e)throw e;
-        const {data:{session},error:e2}=await sb.auth.signInWithPassword({email:f.email,password:f.pw});
-        if(e2)throw e2;
-        if(session){
-          await apiFetch("/api/profile",{method:"POST",body:{name:f.name,company:f.company}},session.access_token);
-          onAuth(session,{name:f.name,company:f.company});
-        }
-      } else {
-        const {data:{session},error:e}=await sb.auth.signInWithPassword({email:f.email,password:f.pw});
-        if(e)throw e;
-        const profile=await apiFetch("/api/profile",{},session.access_token);
-        onAuth(session,profile);
-      }
-    }catch(e){setError(e.message||"Something went wrong");}
-    setLoading(false);
+      if (!res.ok) throw new Error(data?.error || data?.message || "Something went wrong.");
+      onSuccess(data);
+    } catch (e) {
+      setErr(e.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return(<div style={{minHeight:"100vh",background:C.ink,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24}}>
-    <style>{CSS}</style>
-    <button onClick={onBack} style={{position:"absolute",top:20,left:20,background:"none",border:"none",color:"#64748B",cursor:"pointer",fontSize:22}}>‹</button>
-    <div style={{fontFamily:"'Instrument Serif'",fontSize:28,color:"#fff",marginBottom:32}}>BEE<span style={{color:C.copper}}>compass</span></div>
-    <div style={{width:"100%",maxWidth:400,background:"#ffffff0A",border:"1px solid #ffffff12",borderRadius:22,padding:"28px 24px",animation:"up .4s ease"}}>
-      <div style={{display:"flex",background:"#ffffff0C",borderRadius:10,padding:3,marginBottom:22}}>
-        {["signup","login"].map(m=>(<button key={m} onClick={()=>setMode(m)} style={{flex:1,padding:"9px",borderRadius:8,border:"none",cursor:"pointer",fontWeight:600,fontSize:13,background:m===mode?"#fff":"transparent",color:m===mode?C.ink:"#ffffff60",transition:"all .2s"}}>{m==="login"?"Sign In":"Create Account"}</button>))}
+  return (
+    <div className="auth-page">
+      {/* Left panel */}
+      <div className="auth-left">
+        <div className="al-logo">
+          <div className="al-logo-mark">B</div>
+          <span className="al-logo-text">
+            <span className="al-bee">BEE</span>
+            <span className="al-compass">compass</span>
+          </span>
+        </div>
+
+        <div className="al-tagline">
+          <h2>Know your B-BBEE<br /><span>before verification day.</span></h2>
+          <p>South Africa's pre-readiness planning platform for growth-stage businesses.</p>
+          <ul className="al-points">
+            {["Live score estimate across 5 pillars", "AI-powered gap analysis and action plan", "Connect with SANAS-accredited verifiers", "Secure document vault and report generator"].map(p => (
+              <li key={p}><div className="al-dot" />{p}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="al-disclaimer">
+          BEEcompass is a pre-readiness planning tool — not a verification body. All scores are estimates only and cannot be used as official B-BBEE certificates. POPIA compliant.
+        </div>
       </div>
-      {mode==="signup"&&<>
-        <Input label="Full Name" value={f.name} onChange={v=>set("name",v)} placeholder="Sipho Dlamini"/>
-        <Input label="Company Name" value={f.company} onChange={v=>set("company",v)} placeholder="Dlamini Holdings (Pty) Ltd"/>
-      </>}
-      <Input label="Email" value={f.email} onChange={v=>set("email",v)} placeholder="you@company.co.za" type="email"/>
-      <Input label="Password" value={f.pw} onChange={v=>set("pw",v)} placeholder="••••••••" type="password"/>
-      {error&&<div style={{fontSize:13,color:"#FCA5A5",marginBottom:12,padding:"10px",background:"#B91C1C20",borderRadius:9}}>{error}</div>}
-      <button onClick={submit} disabled={loading} style={{width:"100%",padding:"13px",border:"none",borderRadius:12,cursor:"pointer",fontWeight:700,fontSize:15,background:`linear-gradient(135deg,${C.copper},${C.copperLt})`,color:"#fff",display:"flex",alignItems:"center",justifyContent:"center",gap:8,marginTop:4}}>
-        {loading?<Spin/>:(mode==="login"?"Sign In →":"Start Free →")}
-      </button>
-      <div style={{textAlign:"center",marginTop:14,fontSize:12,color:"#ffffff40"}}>No credit card required · POPIA compliant</div>
-    </div>
-  </div>);
-}
 
-/* ═══════════════════════════════════════════════════════════
-   MAIN APP (after login)
-═══════════════════════════════════════════════════════════ */
-const APP_PAGES=["dashboard","questionnaire","calculator","gaps","scenario","documents","chat","verifiers","report","info"];
+      {/* Right panel */}
+      <div className="auth-right">
+        <div className="auth-box fade">
+          {/* Mobile logo */}
+          <div style={{ display: "none", marginBottom: 28 }} className="mobile-auth-logo">
+            <span style={{ fontFamily: "var(--font-d)", fontSize: 22, fontWeight: 700 }}>
+              <span style={{ color: "var(--navy)" }}>BEE</span>
+              <span style={{ color: "var(--gold)" }}>compass</span>
+            </span>
+          </div>
 
-function AppShell({session,user,setUser,onLogout,vals,setVals}){
-  const [page,setPage]=useState("dashboard");
-  const token=session?.access_token;
-  const total=useMemo(()=>ELEMENTS.reduce((s,e)=>s+calcEl(e,vals),0),[vals]);
-  const bee=useMemo(()=>getLevel(total),[total]);
+          <div className="auth-tabs">
+            <button className={`auth-tab ${tab === "signup" ? "active" : ""}`} onClick={() => { setTab("signup"); setErr(""); }}>
+              Create Account
+            </button>
+            <button className={`auth-tab ${tab === "signin" ? "active" : ""}`} onClick={() => { setTab("signin"); setErr(""); }}>
+              Sign In
+            </button>
+          </div>
 
-  return(<div style={{minHeight:"100vh",background:C.bg}}>
-    <style>{CSS}</style>
-    {/* Top bar */}
-    <div style={{position:"sticky",top:0,zIndex:100,background:C.white+"F0",backdropFilter:"blur(12px)",borderBottom:`1px solid ${C.border}`,padding:"12px 24px",display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <div style={{width:28,height:28,borderRadius:8,background:`linear-gradient(135deg,${C.copper},${C.copperLt})`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:14}}>🧭</div>
-        <span style={{fontFamily:"'Instrument Serif'",fontSize:18,color:C.ink}}>BEE<span style={{color:C.copper}}>compass</span></span>
-      </div>
-      <div style={{display:"flex",gap:6,overflowX:"auto",scrollbarWidth:"none"}}>
-        {[["dashboard","🏠"],["questionnaire","📋"],["calculator","🧮"],["gaps","🎯"],["scenario","🔧"],["documents","📁"],["chat","🤖"],["verifiers","🤝"],["report","📄"],["info","📚"]].map(([p,icon])=>(
-          <button key={p} onClick={()=>setPage(p)} style={{padding:"6px 12px",borderRadius:9,border:`1px solid ${page===p?C.ink:C.border}`,background:page===p?C.ink:"transparent",color:page===p?"#fff":C.mid,fontWeight:500,fontSize:12,cursor:"pointer",whiteSpace:"nowrap",display:"flex",alignItems:"center",gap:4}}>
-            {icon} <span style={{display:"none"}}>{p}</span>
+          <div className="auth-box-h">{tab === "signup" ? "Get started free" : "Welcome back"}</div>
+          <div className="auth-box-sub">
+            {tab === "signup" ? "No credit card required." : "Sign in to your BEEcompass account."}
+          </div>
+
+          {tab === "signup" && (
+            <>
+              <div className="form-group fade fade-1">
+                <label className="form-label">Full Name</label>
+                <input className="form-input" placeholder="Jane Smith" value={form.name} onChange={set("name")} />
+              </div>
+              <div className="form-group fade fade-2">
+                <label className="form-label">Company Name</label>
+                <input className="form-input" placeholder="Acme (Pty) Ltd" value={form.company} onChange={set("company")} />
+              </div>
+            </>
+          )}
+
+          <div className="form-group fade fade-3">
+            <label className="form-label">Email Address</label>
+            <input className="form-input" type="email" placeholder="you@company.co.za" value={form.email} onChange={set("email")} />
+          </div>
+
+          <div className="form-group fade fade-4">
+            <label className="form-label">Password</label>
+            <input className="form-input" type="password" placeholder={tab === "signup" ? "Min. 8 characters" : "Your password"} value={form.password} onChange={set("password")} />
+          </div>
+
+          {err && (
+            <div className="error-box" style={{ marginBottom: 14 }}>
+              <span>⚠️</span>
+              <span>{err}</span>
+            </div>
+          )}
+
+          <button className="btn btn-primary btn-full btn-lg" onClick={submit} disabled={loading} style={{ marginTop: 4 }}>
+            {loading ? <><div className="spinner" />{tab === "signup" ? "Creating account…" : "Signing in…"}</> : tab === "signup" ? "Create Account →" : "Sign In →"}
           </button>
-        ))}
-      </div>
-      <div style={{display:"flex",alignItems:"center",gap:10}}>
-        <Tag label={bee.label} color={bee.clr} bg={bee.clr+"18"}/>
-        <button onClick={onLogout} style={{fontSize:13,color:C.mid,background:"none",border:"none",cursor:"pointer"}}>Sign out</button>
-      </div>
-    </div>
 
-    {/* Pages */}
-    <div style={{maxWidth:1100,margin:"0 auto",padding:"28px 24px 80px"}}>
-      {page==="dashboard"    && <AppDashboard    vals={vals} user={user} setPage={setPage} token={token}/>}
-      {page==="questionnaire"&& <Questionnaire   token={token}/>}
-      {page==="calculator"   && <Calculator      vals={vals} setVals={setVals} token={token}/>}
-      {page==="gaps"         && <GapAnalysis     vals={vals}/>}
-      {page==="scenario"     && <ScenarioPlanner vals={vals} setVals={setVals}/>}
-      {page==="documents"    && <DocumentVault   token={token}/>}
-      {page==="chat"         && <BeeBot          token={token} vals={vals} user={user}/>}
-      {page==="verifiers"    && <VerifierMarket  token={token}/>}
-      {page==="report"       && <ReportGen       token={token} vals={vals} user={user}/>}
-      {page==="info"         && <AboutBEE/>}
-    </div>
-  </div>);
-}
+          <div className="divider-text" style={{ marginTop: 20 }}>or</div>
 
-/* ── App Dashboard ────────────────────────────────────────── */
-function AppDashboard({vals,user,setPage,token}){
-  const els=ELEMENTS.map(e=>({...e,score:calcEl(e,vals)}));
-  const total=els.reduce((a,b)=>a+b.score,0);
-  const bee=getLevel(total);
-  const next=[{l:"Level 4",min:80},{l:"Level 3",min:90},{l:"Level 2",min:95},{l:"Level 1",min:100}].find(t=>t.min>total);
+          <button className="btn btn-ghost btn-full" onClick={onBack} style={{ fontSize: 13, color: "var(--muted)" }}>
+            ← Back to homepage
+          </button>
 
-  return(<div style={{animation:"up .4s ease"}}>
-    <div style={{marginBottom:24}}>
-      <p style={{fontSize:13,color:C.muted}}>Welcome back, <strong style={{color:C.ink}}>{user?.name?.split(" ")[0]||"there"}</strong></p>
-      <h1 className="serif" style={{fontSize:32,marginTop:2}}>{user?.company||"Your Company"}</h1>
-    </div>
-
-    {/* Score hero */}
-    <div style={{background:C.ink,borderRadius:22,padding:"28px 28px",marginBottom:20,position:"relative",overflow:"hidden"}}>
-      <div style={{position:"absolute",right:-50,top:-50,width:200,height:200,borderRadius:"50%",background:"#ffffff05"}}/>
-      <div style={{display:"flex",alignItems:"center",gap:24,position:"relative"}}>
-        <div style={{textAlign:"center"}}>
-          <div style={{fontFamily:"'Instrument Serif'",fontSize:52,color:"#fff",lineHeight:1}}>{total.toFixed(0)}</div>
-          <div style={{fontSize:11,color:C.copper,marginTop:2}}>/ 109 pts</div>
+          {tab === "signup" && (
+            <p style={{ fontSize: 11.5, color: "var(--muted)", textAlign: "center", marginTop: 16, lineHeight: 1.6 }}>
+              By creating an account you agree to our Terms of Service and Privacy Policy. POPIA compliant.
+            </p>
+          )}
         </div>
-        <div style={{flex:1}}>
-          <Tag label="ESTIMATED SCORE" color={C.amber}/>
-          <div style={{fontFamily:"'Instrument Serif'",fontSize:36,color:"#fff",marginTop:6}}>{bee.label}</div>
-          <div style={{fontSize:14,color:"#94A3B8",marginTop:4}}>{bee.rec} estimated recognition</div>
-        </div>
-        {next&&<div style={{textAlign:"right"}}>
-          <div style={{fontSize:12,color:"#64748B"}}>Next milestone</div>
-          <div style={{fontFamily:"'Instrument Serif'",fontSize:22,color:C.amber}}>{next.l}</div>
-          <div style={{fontSize:13,color:"#64748B"}}>{(next.min-total).toFixed(1)} pts away</div>
-        </div>}
       </div>
     </div>
+  );
+};
 
-    {/* Quick actions */}
-    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
-      {[["📋","Questionnaire","questionnaire"],["📁","Documents","documents"],["🤖","Ask BeeBot","chat"],["🤝","Book Verifier","verifiers"]].map(([i,l,p])=>(
-        <Card key={l} ch={<div style={{textAlign:"center"}}>
-          <div style={{fontSize:28,marginBottom:8}}>{i}</div>
-          <div style={{fontWeight:600,fontSize:13}}>{l}</div>
-        </div>} p="20px" style={{cursor:"pointer"}} onClick={()=>setPage(p)}/>
-      ))}
-    </div>
-
-    {/* Pillars */}
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-      <Card ch={<div>
-        <p style={{fontWeight:700,fontSize:16,marginBottom:14}}>Pillar Readiness</p>
-        <div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {els.map(e=>{
-            const p=PILLARS.find(p=>p.id===e.id||e.id===p.key)||{color:C.mid};
-            const pct=e.score/e.max;
-            const clr=pct>=.8?C.green:pct>=.5?C.amber:C.red;
-            return(<div key={e.id}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                <span style={{fontSize:13,fontWeight:500}}>{PILLARS.find(p=>p.key===e.id)?.label||e.id}</span>
-                <Tag label={`${e.score.toFixed(1)}/${e.max}`} color={clr} bg={clr+"14"}/>
-              </div>
-              <Bar v={e.score} max={e.max} color={clr}/>
-            </div>);
-          })}
-        </div>
-      </div>} p="22px"/>
-
-      <div style={{display:"flex",flexDirection:"column",gap:12}}>
-        <Card ch={<div>
-          <p style={{fontWeight:700,fontSize:16,marginBottom:4}}>Your next step</p>
-          <p style={{fontSize:14,color:C.mid,lineHeight:1.6,marginBottom:14}}>Complete the questionnaire to improve your confidence score and unlock your full gap analysis.</p>
-          <Btn ch="Complete Questionnaire →" variant="copper" onClick={()=>setPage("questionnaire")} full style={{borderRadius:12,fontSize:13}}/>
-        </div>} p="22px"/>
-        <Card ch={<div>
-          <p style={{fontWeight:700,fontSize:16,marginBottom:4}}>Generate Your Report</p>
-          <p style={{fontSize:14,color:C.mid,lineHeight:1.6,marginBottom:14}}>Download your pre-readiness PDF to hand to your SANAS-accredited verifier.</p>
-          <Btn ch="Generate PDF Report" variant="outline" onClick={()=>setPage("report")} full style={{borderRadius:12,fontSize:13}}/>
-        </div>} p="22px"/>
-      </div>
-    </div>
-
-    <div style={{marginTop:20}}><Disclaimer/></div>
-  </div>);
-}
-
-/* ── Questionnaire ────────────────────────────────────────── */
-const QUESTIONS=[
-  {id:"q1", section:"Business Profile",  q:"What is your company's annual turnover?",          type:"select", opts:["Under R1m","R1m–R10m (EME)","R10m–R50m (QSE)","Over R50m (Generic)"]},
-  {id:"q2", section:"Business Profile",  q:"How many full-time employees do you have?",        type:"select", opts:["1–5","6–20","21–50","51–150","150+"]},
-  {id:"q3", section:"Business Profile",  q:"What industry are you in?",                        type:"select", opts:["Construction","Financial Services","Mining","Manufacturing","Retail","ICT","Agriculture","Other"]},
-  {id:"q4", section:"Ownership",         q:"What percentage of your company is Black-owned?",  type:"select", opts:["0–25%","26–50%","51–74%","75–100%"]},
-  {id:"q5", section:"Ownership",         q:"What percentage is Black women-owned?",            type:"select", opts:["0%","1–10%","11–25%","26–50%","Over 50%"]},
-  {id:"q6", section:"Ownership",         q:"Do you have a Shareholders Agreement?",            type:"bool"},
-  {id:"q7", section:"Ownership",         q:"Do you have an Employee Share Ownership Programme (ESOP)?", type:"bool"},
-  {id:"q8", section:"Management",        q:"What % of your board/directors are Black?",        type:"select", opts:["0–24%","25–49%","50–74%","75–100%"]},
-  {id:"q9", section:"Management",        q:"What % of senior management (C-suite) are Black?", type:"select", opts:["0–24%","25–49%","50–74%","75–100%"]},
-  {id:"q10",section:"Management",        q:"Do you have an Employment Equity Plan in place?",  type:"bool"},
-  {id:"q11",section:"Skills Development",q:"What % of payroll do you spend on training Black employees?", type:"select", opts:["0–0.5%","0.5–1%","1–2%","2–3%","Over 3%"]},
-  {id:"q12",section:"Skills Development",q:"Do you have employees on SETA-accredited learnerships?", type:"bool"},
-  {id:"q13",section:"Skills Development",q:"Do you offer bursaries to Black students?",       type:"bool"},
-  {id:"q14",section:"Skills Development",q:"Have you submitted a Workplace Skills Plan (WSP) to your SETA?", type:"bool"},
-  {id:"q15",section:"Enterprise & Supplier Dev",q:"What % of your total procurement is from BEE-compliant suppliers?", type:"select", opts:["0–25%","26–50%","51–74%","75–100%"]},
-  {id:"q16",section:"Enterprise & Supplier Dev",q:"What % of procurement spend is with Black-owned suppliers?", type:"select", opts:["0–10%","11–25%","26–50%","Over 50%"]},
-  {id:"q17",section:"Enterprise & Supplier Dev",q:"Do you collect and verify BEE certificates from suppliers?", type:"bool"},
-  {id:"q18",section:"Enterprise & Supplier Dev",q:"Do you contribute to Enterprise Development programmes?", type:"bool"},
-  {id:"q19",section:"Enterprise & Supplier Dev",q:"What % of your NPAT goes to Supplier Development?", type:"select", opts:["0%","0.1–1%","1–2%","Over 2%"]},
-  {id:"q20",section:"Socio-Economic Dev",q:"Do you make SED contributions to approved organisations?", type:"bool"},
-  {id:"q21",section:"Socio-Economic Dev",q:"What % of NPAT goes to SED?",                     type:"select", opts:["0%","0.1–0.5%","0.5–1%","Over 1%"]},
-  {id:"q22",section:"Verification Readiness",q:"Have you been BEE-verified before?",           type:"bool"},
-  {id:"q23",section:"Verification Readiness",q:"Do you have a system for tracking BEE compliance throughout the year?", type:"bool"},
-  {id:"q24",section:"Verification Readiness",q:"Do you have all supporting documents organised and ready?", type:"select", opts:["None ready","Some ready","Mostly ready","All ready"]},
-  {id:"q25",section:"Verification Readiness",q:"When do you need your BEE certificate?",      type:"select", opts:["Urgently (within 1 month)","1–3 months","3–6 months","Not urgent"]},
+/* ─── App Shell ─────────────────────────────────────────────── */
+const NAV_ITEMS = [
+  { id: "dashboard", icon: "📊", label: "Dashboard" },
+  { id: "questionnaire", icon: "📝", label: "Questionnaire" },
+  { id: "calculator", icon: "🧮", label: "Calculator" },
+  { id: "gap", icon: "🎯", label: "Gap Analysis" },
+  { id: "scenario", icon: "🔄", label: "Scenario Planner" },
+  { id: "vault", icon: "📁", label: "Document Vault" },
+  { id: "beebot", icon: "🤖", label: "BeeBot" },
+  { id: "marketplace", icon: "🏢", label: "Verifiers" },
+  { id: "report", icon: "📄", label: "Report" },
+  { id: "beeinfo", icon: "📚", label: "BEE Info" },
 ];
 
-function Questionnaire({token}){
-  const [answers,setAnswers]=useState({});
-  const [saving,setSaving]=useState(false);
-  const [saved,setSaved]=useState(false);
-  const sections=[...new Set(QUESTIONS.map(q=>q.section))];
+const MOBILE_NAV = [
+  { id: "dashboard", icon: "📊", label: "Home" },
+  { id: "calculator", icon: "🧮", label: "Score" },
+  { id: "beebot", icon: "🤖", label: "BeeBot" },
+  { id: "marketplace", icon: "🏢", label: "Verifiers" },
+  { id: "vault", icon: "📁", label: "Vault" },
+];
 
-  const save=async()=>{
-    setSaving(true);
-    if(token) await apiFetch("/api/questionnaire",{method:"POST",body:{answers}},token).catch(()=>{});
-    setSaved(true);setSaving(false);
-    setTimeout(()=>setSaved(false),3000);
-  };
+const AppShell = ({ user, onLogout }) => {
+  const [view, setView] = useState("dashboard");
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const answered=Object.keys(answers).length;
-  const pct=Math.round(answered/QUESTIONS.length*100);
+  const go = (v) => { setView(v); setSidebarOpen(false); };
+  const title = NAV_ITEMS.find(n => n.id === view)?.label || "Dashboard";
 
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Step 2 of 7</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:6}}>BEE Readiness Questionnaire</h1>
-    <p style={{fontSize:15,color:C.mid,marginBottom:20}}>Answer these 25 questions based on the B-BBEE Codes of Good Practice. Your answers improve your confidence score and gap analysis.</p>
+  const initials = (user?.name || user?.email || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
 
-    {/* Progress */}
-    <Card ch={<div>
-      <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-        <span style={{fontSize:14,fontWeight:600}}>{answered} of {QUESTIONS.length} answered</span>
-        <span style={{fontSize:14,color:C.copper,fontWeight:700}}>{pct}% complete</span>
-      </div>
-      <Bar v={answered} max={QUESTIONS.length} color={C.copper}/>
-    </div>} p="18px" style={{marginBottom:20}}/>
+  return (
+    <div className="shell">
+      {/* Overlay */}
+      <div className={`overlay${sidebarOpen ? " open" : ""}`} onClick={() => setSidebarOpen(false)} />
 
-    {sections.map(sec=>(
-      <div key={sec} style={{marginBottom:24}}>
-        <h3 style={{fontSize:16,fontWeight:700,marginBottom:12,paddingBottom:8,borderBottom:`2px solid ${C.s100}`}}>{sec}</h3>
-        <div style={{display:"flex",flexDirection:"column",gap:12}}>
-          {QUESTIONS.filter(q=>q.section===sec).map(q=>(
-            <Card key={q.id} ch={<div>
-              <p style={{fontSize:14,fontWeight:600,marginBottom:12,lineHeight:1.5}}>{q.q}</p>
-              {q.type==="bool"
-                ?<div style={{display:"flex",gap:10}}>
-                  {["Yes","No"].map(opt=>(
-                    <button key={opt} onClick={()=>setAnswers(a=>({...a,[q.id]:opt}))} style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${answers[q.id]===opt?C.ink:C.border}`,background:answers[q.id]===opt?C.ink:"transparent",color:answers[q.id]===opt?"#fff":C.ink,fontWeight:600,fontSize:14,cursor:"pointer"}}>{opt}</button>
-                  ))}
-                </div>
-                :<div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
-                  {q.opts?.map(opt=>(
-                    <button key={opt} onClick={()=>setAnswers(a=>({...a,[q.id]:opt}))} style={{padding:"8px 14px",borderRadius:10,border:`1.5px solid ${answers[q.id]===opt?C.ink:C.border}`,background:answers[q.id]===opt?C.ink:"transparent",color:answers[q.id]===opt?"#fff":C.ink,fontWeight:500,fontSize:13,cursor:"pointer"}}>{opt}</button>
-                  ))}
-                </div>
-              }
-            </div>} p="18px"/>
+      {/* Sidebar */}
+      <aside className={`sidebar${sidebarOpen ? " open" : ""}`}>
+        <div className="sb-logo">
+          <div className="sb-logo-mark">B</div>
+          <div className="sb-logo-text">
+            <span className="sb-logo-bee">BEE</span>
+            <span className="sb-logo-compass">compass</span>
+          </div>
+        </div>
+
+        <nav className="sb-nav">
+          <div className="sb-label">Main</div>
+          {NAV_ITEMS.slice(0, 4).map(n => (
+            <button key={n.id} className={`sb-item${view === n.id ? " active" : ""}`} onClick={() => go(n.id)}>
+              <span className="si-icon">{n.icon}</span>{n.label}
+            </button>
           ))}
-        </div>
-      </div>
-    ))}
+          <div className="sb-label">Tools</div>
+          {NAV_ITEMS.slice(4, 8).map(n => (
+            <button key={n.id} className={`sb-item${view === n.id ? " active" : ""}`} onClick={() => go(n.id)}>
+              <span className="si-icon">{n.icon}</span>{n.label}
+            </button>
+          ))}
+          <div className="sb-label">Reports</div>
+          {NAV_ITEMS.slice(8).map(n => (
+            <button key={n.id} className={`sb-item${view === n.id ? " active" : ""}`} onClick={() => go(n.id)}>
+              <span className="si-icon">{n.icon}</span>{n.label}
+            </button>
+          ))}
+        </nav>
 
-    <div style={{display:"flex",gap:12}}>
-      <Btn ch={saving?<><Spin size={14}/>Saving…</>:saved?"✓ Saved!":"Save Progress"} variant={saved?"outline":"copper"} onClick={save} disabled={saving} style={{borderRadius:12,flex:1,justifyContent:"center"}}/>
-    </div>
-  </div>);
-}
-
-/* ── Calculator ───────────────────────────────────────────── */
-const CALC_FIELDS=[
-  {id:"blackOwn",  label:"Black Ownership (%)",           el:"own",   hint:"% of equity held by Black South Africans",max:100,pts:20},
-  {id:"blackWomen",label:"Black Women Ownership (%)",      el:"own",   hint:"% of equity held by Black women",         max:100,pts:5},
-  {id:"board",     label:"Black Board Members (%)",        el:"mgmt",  hint:"% Black at board/director level",         max:100,pts:5},
-  {id:"exec",      label:"Black Executives (%)",           el:"mgmt",  hint:"% Black C-suite executives",              max:100,pts:5},
-  {id:"senior",    label:"Black Senior Management (%)",    el:"mgmt",  hint:"% Black senior management",              max:100,pts:5},
-  {id:"middle",    label:"Black Middle Management (%)",    el:"mgmt",  hint:"% Black middle management",              max:100,pts:4},
-  {id:"trainPct",  label:"Training Spend (% of payroll)", el:"skills",hint:"% of payroll spent on Black training",    max:6,  pts:8},
-  {id:"learners",  label:"Learnership Enrolments",         el:"skills",hint:"Black learners in accredited programs",   max:5,  pts:7},
-  {id:"bursaries", label:"Bursary Awards",                 el:"skills",hint:"Bursaries granted to Black students",     max:20, pts:5},
-  {id:"beeProc",   label:"BEE-Compliant Suppliers (%)",   el:"esd",   hint:"% procurement from BEE suppliers",       max:100,pts:15},
-  {id:"blackSpend",label:"Black Supplier Spend (%)",       el:"esd",   hint:"% spend on Black-owned businesses",      max:100,pts:12},
-  {id:"supDev",    label:"Supplier Dev (% NPAT)",          el:"esd",   hint:"Investment in supplier development",     max:3,  pts:10},
-  {id:"entDev",    label:"Enterprise Dev (% NPAT)",        el:"esd",   hint:"Investment in enterprise development",   max:3,  pts:5},
-  {id:"sedPct",    label:"SED Contribution (% NPAT)",      el:"sed",   hint:"Donations to approved social programs",  max:1,  pts:5},
-];
-
-function Calculator({vals,setVals,token}){
-  const [saving,setSaving]=useState(false);
-  const total=ELEMENTS.reduce((s,e)=>s+calcEl(e,vals),0);
-  const bee=getLevel(total);
-
-  const save=async()=>{
-    setSaving(true);
-    if(token) await apiFetch("/api/scorecard",{method:"POST",body:{values:vals}},token).catch(()=>{});
-    setSaving(false);
-  };
-
-  const elGroups={own:"Ownership",mgmt:"Management Control",skills:"Skills Development",esd:"Enterprise & Supplier Dev",sed:"Socio-Economic Dev"};
-
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Scorecard Engine</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:20}}>BEE Readiness Calculator</h1>
-
-    {/* Score card */}
-    <Card ch={<div style={{display:"flex",justifyContent:"space-between",alignItems:"center",flexWrap:"wrap",gap:16}}>
-      <div>
-        <p style={{fontSize:13,color:C.muted,marginBottom:4}}>Estimated Total Score</p>
-        <p style={{fontFamily:"'Instrument Serif'",fontSize:48,color:C.ink,lineHeight:1}}>{total.toFixed(1)}<span style={{fontSize:20,color:C.muted}}>/109</span></p>
-      </div>
-      <div style={{textAlign:"right"}}>
-        <p style={{fontSize:13,color:C.muted,marginBottom:4}}>Estimated Level</p>
-        <p style={{fontFamily:"'Instrument Serif'",fontSize:28,color:bee.clr}}>{bee.label}</p>
-        <Tag label={`${bee.rec} recognition`} color={bee.clr} bg={bee.clr+"18"}/>
-      </div>
-    </div>} p="24px" style={{marginBottom:20}}/>
-
-    {/* Fields by element */}
-    {Object.entries(elGroups).map(([elId,elName])=>{
-      const fields=CALC_FIELDS.filter(f=>f.el===elId);
-      const el=ELEMENTS.find(e=>e.id===elId);
-      const score=el?calcEl(el,vals):0;
-      return(<div key={elId} style={{marginBottom:20}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-          <h3 style={{fontSize:16,fontWeight:700}}>{elName}</h3>
-          <Tag label={`${score.toFixed(1)} / ${el?.max} pts`} color={score/el?.max>=.8?C.green:score/el?.max>=.5?C.amber:C.red}/>
-        </div>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-          {fields.map(f=>{
-            const v=vals[f.id]||"";
-            const pct=Math.min(parseFloat(v||0)/f.max,1);
-            return(<Card key={f.id} ch={<div>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                <span style={{fontSize:13,fontWeight:600}}>{f.label}</span>
-                <span style={{fontSize:12,color:pct>=.8?C.green:pct>=.4?C.amber:C.muted,fontWeight:700}}>+{(pct*f.pts).toFixed(1)} pts</span>
-              </div>
-              <p style={{fontSize:12,color:C.muted,marginBottom:8}}>{f.hint}</p>
-              <div style={{display:"flex",alignItems:"center",border:`1.5px solid ${pct>0?C.copper:C.border}`,borderRadius:10,overflow:"hidden",marginBottom:6}}>
-                <input type="number" min="0" max={f.max} value={v} onChange={e=>setVals(p=>({...p,[f.id]:e.target.value}))} placeholder="0"
-                  style={{flex:1,padding:"9px 13px",border:"none",background:"transparent",fontSize:15,fontWeight:600,color:C.ink,outline:"none"}}/>
-                <span style={{padding:"0 10px",fontSize:11,color:C.muted,borderLeft:`1px solid ${C.border}`}}>max {f.max}</span>
-              </div>
-              <Bar v={parseFloat(v||0)} max={f.max} color={pct>=.8?C.green:pct>=.4?C.amber:"#DDD"}/>
-            </div>} p="14px"/>);
-          })}
-        </div>
-      </div>);
-    })}
-
-    <Btn ch={saving?<><Spin size={14}/>Saving…</>:"💾 Save Scorecard"} variant="copper" onClick={save} disabled={saving} style={{borderRadius:12,width:"100%",justifyContent:"center"}}/>
-    <div style={{marginTop:16}}><Disclaimer/></div>
-  </div>);
-}
-
-/* ── Gap Analysis ─────────────────────────────────────────── */
-function GapAnalysis({vals}){
-  const els=ELEMENTS.map(e=>({...e,score:calcEl(e,vals),gap:e.max-calcEl(e,vals)}));
-  const total=els.reduce((a,b)=>a+b.score,0);
-  const next=[{l:"Level 4",min:80},{l:"Level 3",min:90},{l:"Level 2",min:95},{l:"Level 1",min:100}].find(t=>t.min>total);
-  const LABELS={own:"Ownership",mgmt:"Management Control",skills:"Skills Development",esd:"Enterprise & Supplier Dev",sed:"Socio-Economic Dev"};
-  const TIPS={
-    own:"Consider an Employee Share Ownership Programme (ESOP) or structured BEE equity transaction. Even 26% Black ownership dramatically improves this element.",
-    mgmt:"Fast-track Black talent into executive roles. Board co-option of Black Non-Executive Directors is the fastest lever available.",
-    skills:"Enroll Black staff in SETA-accredited learnerships — 1–2% of payroll in targeted training yields material point gains.",
-    esd:"Verify and document all supplier BEE certificates. Consciously shift procurement — set a target for Black-owned supplier spend.",
-    sed:"Donate 1% of NPAT to an approved NPO. Get a board resolution and proper receipts. Highest-return, lowest-cost action.",
-  };
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Improvement Plan</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:20}}>Gap Analysis</h1>
-
-    {next&&<Card ch={<div>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-end",marginBottom:12}}>
-        <div><p style={{fontSize:12,color:C.muted,marginBottom:4}}>Next milestone</p><p className="serif" style={{fontSize:26}}>{next.l}</p></div>
-        <div style={{textAlign:"right"}}><p className="serif" style={{fontSize:24,color:C.copper}}>{(next.min-total).toFixed(1)}</p><p style={{fontSize:11,color:C.muted}}>points needed</p></div>
-      </div>
-      <Bar v={total} max={next.min} color={C.copper}/>
-    </div>} p="22px" style={{marginBottom:20}}/>}
-
-    <div style={{display:"flex",flexDirection:"column",gap:14}}>
-      {[...els].sort((a,b)=>b.gap-a.gap).map(e=>{
-        const pct=e.score/e.max,clr=pct>=.8?C.green:pct>=.5?C.amber:C.red;
-        return(<Card key={e.id} ch={<div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-            <p style={{fontWeight:700,fontSize:15}}>{LABELS[e.id]||e.id}</p>
-            <div style={{display:"flex",gap:8}}>
-              <Tag label={`${e.score.toFixed(1)}/${e.max}`} color={clr} bg={clr+"14"}/>
-              <Tag label={pct>=.8?"Strong":pct>=.5?"Fair":"Priority"} color={clr} bg={clr+"14"}/>
+        <div className="sb-footer">
+          <div className="sb-user" onClick={onLogout} title="Sign out">
+            <div className="sb-avatar">{initials}</div>
+            <div className="sb-user-info">
+              <div className="sb-user-name">{user?.name || user?.email || "User"}</div>
+              <div className="sb-user-role">Sign out</div>
             </div>
           </div>
-          <Bar v={e.score} max={e.max} color={clr}/>
-          {e.gap>0.3&&<div style={{marginTop:12,padding:"12px",background:C.s100,borderRadius:10,fontSize:13,color:C.s700,lineHeight:1.6}}>💡 {TIPS[e.id]}</div>}
-        </div>} style={{borderLeft:`4px solid ${clr}`}}/>);
-      })}
-    </div>
-
-    <div style={{marginTop:20}}><Disclaimer/></div>
-  </div>);
-}
-
-/* ── Scenario Planner ─────────────────────────────────────── */
-function ScenarioPlanner({vals,setVals}){
-  const total=ELEMENTS.reduce((s,e)=>s+calcEl(e,vals),0);
-  const bee=getLevel(total);
-  const controls=[
-    {id:"blackOwn",  label:"Black Ownership (%)",    min:0,max:51, step:1},
-    {id:"board",     label:"Black Board (%)",         min:0,max:100,step:1},
-    {id:"trainPct",  label:"Training Spend % payroll",min:0,max:6,  step:0.1},
-    {id:"beeProc",   label:"BEE Supplier Profile %",  min:0,max:100,step:1},
-    {id:"blackSpend",label:"Black Supplier Spend %",  min:0,max:100,step:1},
-    {id:"sedPct",    label:"SED % NPAT",              min:0,max:2,  step:0.1},
-  ];
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>What-If Modelling</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:6}}>Scenario Planner</h1>
-    <p style={{fontSize:15,color:C.mid,marginBottom:20}}>Adjust the sliders to model potential improvements before spending money.</p>
-
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
-      <div>
-        <Card ch={<div>
-          <p style={{fontWeight:700,fontSize:16,marginBottom:14}}>Scenario Controls</p>
-          <div style={{display:"flex",flexDirection:"column",gap:14}}>
-            {controls.map(c=>{
-              const v=parseFloat(vals[c.id]||0);
-              return(<div key={c.id} style={{borderRadius:12,border:`1px solid ${C.border}`,padding:"14px"}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:10}}>
-                  <span style={{fontSize:13,fontWeight:500}}>{c.label}</span>
-                  <Tag label={v.toFixed(1)} color={C.s700} bg={C.s100}/>
-                </div>
-                <input type="range" min={c.min} max={c.max} step={c.step} value={v}
-                  onChange={e=>setVals(p=>({...p,[c.id]:e.target.value}))}/>
-              </div>);
-            })}
-          </div>
-        </div>} p="22px"/>
-      </div>
-
-      <div>
-        <Card ch={<div>
-          <p style={{fontWeight:700,fontSize:16,marginBottom:14}}>Projected Impact</p>
-          <div style={{textAlign:"center",padding:"24px",background:C.s100,borderRadius:14,marginBottom:16}}>
-            <p style={{fontSize:12,color:C.muted,marginBottom:4}}>Projected Score</p>
-            <p style={{fontFamily:"'Instrument Serif'",fontSize:52,color:C.ink,lineHeight:1}}>{total.toFixed(1)}</p>
-            <p style={{fontSize:13,color:C.muted}}>/ 109 points</p>
-            <p style={{fontFamily:"'Instrument Serif'",fontSize:24,color:bee.clr,marginTop:8}}>{bee.label}</p>
-          </div>
-          <div style={{display:"flex",flexDirection:"column",gap:10}}>
-            {ELEMENTS.map(e=>{
-              const s=calcEl(e,vals),pct=s/e.max;
-              const LABELS={own:"Ownership",mgmt:"Management Control",skills:"Skills Development",esd:"Enterprise & Supplier Dev",sed:"Socio-Economic Dev"};
-              const clr=pct>=.8?C.green:pct>=.5?C.amber:C.red;
-              return(<div key={e.id}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                  <span style={{fontSize:12}}>{LABELS[e.id]}</span>
-                  <span style={{fontSize:12,color:clr,fontWeight:600}}>{s.toFixed(1)}/{e.max}</span>
-                </div>
-                <Bar v={s} max={e.max} color={clr}/>
-              </div>);
-            })}
-          </div>
-        </div>} p="22px"/>
-      </div>
-    </div>
-    <div style={{marginTop:20}}><Disclaimer/></div>
-  </div>);
-}
-
-/* ── Document Vault ───────────────────────────────────────── */
-const DOC_CATS=["Ownership","Management Control","Skills Development","Enterprise & Supplier Dev","Socio-Economic Dev","General / Other"];
-
-function DocumentVault({token}){
-  const [docs,setDocs]=useState([]);
-  const [uploading,setUploading]=useState(false);
-  const [sel,setSel]=useState("Ownership");
-  const fileRef=useRef(null);
-
-  const loadDocs=async()=>{
-    if(!token)return;
-    const d=await apiFetch("/api/documents",{},token);
-    if(Array.isArray(d))setDocs(d);
-  };
-  useEffect(()=>{loadDocs();},[token]);
-
-  const upload=async(file)=>{
-    if(!file||!token)return;
-    setUploading(true);
-    const fd=new FormData();
-    fd.append("file",file);fd.append("category",sel);fd.append("name",file.name);
-    const res=await fetch(`${API}/api/documents/upload`,{method:"POST",headers:{Authorization:`Bearer ${token}`},body:fd});
-    const d=await res.json();
-    if(!d.error)setDocs(prev=>[d,...prev]);
-    setUploading(false);
-  };
-
-  const deleteDoc=async(id)=>{
-    if(!token)return;
-    await apiFetch(`/api/documents/${id}`,{method:"DELETE"},token);
-    setDocs(prev=>prev.filter(d=>d.id!==id));
-  };
-
-  const required={
-    "Ownership":["Share register / shareholder certificates","ID copies of all shareholders","Shareholder agreement","CIPC CoR documents"],
-    "Management Control":["Organisational chart (race & gender)","Employment contracts for executives","Payroll by race, gender & level","Board minutes & resolutions"],
-    "Skills Development":["SETA levy returns (EMP201)","Training attendance registers","Learnership agreements","Bursary award letters","WSP submission confirmation"],
-    "Enterprise & Supplier Dev":["BEE certificates of all suppliers","Supplier payment records","ESD contribution agreements & proof","SLAs with Black-owned suppliers"],
-    "Socio-Economic Dev":["SED donation receipts","NPO registration documents","Board resolution authorising SED","Bank proof of transfer"],
-    "General / Other":["Any other compliance documents"],
-  };
-
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Step 3 of 7</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:6}}>Document Vault</h1>
-    <p style={{fontSize:15,color:C.mid,marginBottom:20}}>Upload your supporting documents. Our AI detects the document type and flags what's missing for your SANAS verifier.</p>
-
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16,marginBottom:20}}>
-      {/* Upload area */}
-      <Card ch={<div>
-        <p style={{fontWeight:700,fontSize:16,marginBottom:12}}>Upload Document</p>
-        <div style={{marginBottom:12}}>
-          <p style={{fontSize:12,fontWeight:600,color:C.muted,textTransform:"uppercase",letterSpacing:.5,marginBottom:6}}>Category</p>
-          <select value={sel} onChange={e=>setSel(e.target.value)} style={{width:"100%",padding:"10px 14px",border:`1.5px solid ${C.border}`,borderRadius:10,fontSize:14,background:C.bg,outline:"none"}}>
-            {DOC_CATS.map(c=><option key={c}>{c}</option>)}
-          </select>
         </div>
-        <div onClick={()=>fileRef.current?.click()} style={{border:`2px dashed ${C.border}`,borderRadius:14,padding:"32px",textAlign:"center",cursor:"pointer",background:C.s100}}>
-          <p style={{fontSize:32,marginBottom:8}}>{uploading?"⏳":"📎"}</p>
-          <p style={{fontWeight:600,fontSize:14,marginBottom:4}}>{uploading?"Uploading…":"Click to upload"}</p>
-          <p style={{fontSize:12,color:C.muted}}>PDF, Word, PNG, JPG · Max 10MB</p>
-        </div>
-        <input ref={fileRef} type="file" style={{display:"none"}} accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" onChange={e=>e.target.files?.[0]&&upload(e.target.files[0])}/>
-      </div>} p="20px"/>
+      </aside>
 
-      {/* Required docs checklist */}
-      <Card ch={<div>
-        <p style={{fontWeight:700,fontSize:16,marginBottom:12}}>Required for {sel}</p>
-        {(required[sel]||[]).map(item=>{
-          const uploaded=docs.some(d=>d.category===sel&&d.name.toLowerCase().includes(item.toLowerCase().slice(0,10)));
-          return(<div key={item} style={{display:"flex",gap:10,marginBottom:10,alignItems:"flex-start"}}>
-            <span style={{color:uploaded?C.green:C.muted,fontSize:16,flexShrink:0}}>{uploaded?"✓":"○"}</span>
-            <span style={{fontSize:13,color:uploaded?C.ink:C.mid}}>{item}</span>
-          </div>);
-        })}
-      </div>} p="20px"/>
-    </div>
-
-    {/* Uploaded files */}
-    <Card ch={<div>
-      <p style={{fontWeight:700,fontSize:16,marginBottom:14}}>Uploaded Documents ({docs.length})</p>
-      {docs.length===0
-        ?<p style={{color:C.muted,fontSize:14,textAlign:"center",padding:"20px 0"}}>No documents uploaded yet.</p>
-        :<div style={{display:"flex",flexDirection:"column",gap:10}}>
-          {docs.map(d=>(
-            <div key={d.id} style={{display:"flex",alignItems:"center",gap:12,padding:"12px 14px",borderRadius:12,border:`1px solid ${C.border}`}}>
-              <span style={{fontSize:20,flexShrink:0}}>📄</span>
-              <div style={{flex:1,minWidth:0}}>
-                <p style={{fontWeight:600,fontSize:14,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{d.name}</p>
-                <p style={{fontSize:12,color:C.muted}}>{d.category} · {d.detected_type}</p>
-                {d.ai_summary&&<p style={{fontSize:12,color:C.mid,marginTop:2}}>{d.ai_summary}</p>}
-              </div>
-              <Tag label="✓ Uploaded" color={C.green} bg={C.greenBg}/>
-              <button onClick={()=>deleteDoc(d.id)} style={{background:"none",border:"none",cursor:"pointer",color:C.red,fontSize:18}}>×</button>
+      {/* Main */}
+      <div className="main">
+        {/* Topbar */}
+        <header className="topbar">
+          <div className="topbar-left">
+            <button className="hamburger" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
+            <div className="topbar-title">{title}</div>
+          </div>
+          <div className="topbar-right">
+            <div className="icon-btn" title="Notifications">🔔</div>
+            <div className="icon-btn" onClick={onLogout} title="Sign out" style={{ fontSize: 13, fontWeight: 600 }}>
+              {initials}
             </div>
-          ))}
-        </div>}
-    </div>} p="20px"/>
-  </div>);
-}
-
-/* ── BeeBot AI Chat ───────────────────────────────────────── */
-function BeeBot({token,vals,user}){
-  const [msgs,setMsgs]=useState([{role:"assistant",text:`Hello ${user?.name?.split(" ")[0]||"there"}! I'm BeeBot 🐝, your B-BBEE compliance assistant. I'm trained exclusively on South African BEE legislation including the B-BBEE Act 53 of 2003 and the DTI Codes of Good Practice.\n\nAsk me anything about B-BBEE — ownership structures, scoring, skills development, supplier requirements, or how to prepare for verification. How can I help?`}]);
-  const [input,setInput]=useState("");
-  const [loading,setLoading]=useState(false);
-  const ref=useRef(null);
-  const quickQ=["What documents do I need for ownership?","Explain the ESD element","How do EME/QSE rules work?","What are sub-minimum requirements?","How long is a BEE certificate valid?"];
-
-  const send=async()=>{
-    if(!input.trim()||loading)return;
-    const um={role:"user",text:input};
-    setMsgs(m=>[...m,um]);setInput("");setLoading(true);
-    try{
-      if(token){
-        const d=await apiFetch("/api/chat",{method:"POST",body:{message:input,history:msgs.map(m=>({role:m.role,content:m.text}))}},token);
-        setMsgs(m=>[...m,{role:"assistant",text:d.reply||"Sorry, I couldn't get a response."}]);
-      } else {
-        const r=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:600,system:"You are BeeBot, a South African B-BBEE compliance expert. Only answer BEE-related questions. Be practical and helpful.",messages:[{role:"user",content:input}]})});
-        const d=await r.json();
-        setMsgs(m=>[...m,{role:"assistant",text:d.content?.[0]?.text||"Sorry, try again."}]);
-      }
-    }catch{setMsgs(m=>[...m,{role:"assistant",text:"Connection error. Please try again."}]);}
-    setLoading(false);
-  };
-
-  useEffect(()=>ref.current?.scrollIntoView({behavior:"smooth"}),[msgs,loading]);
-
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>AI Assistant</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:6}}>BeeBot</h1>
-    <p style={{fontSize:15,color:C.mid,marginBottom:14}}>Ask any B-BBEE question. BeeBot only answers questions about South African BEE legislation — nothing else.</p>
-
-    <div style={{display:"flex",gap:8,flexWrap:"wrap",marginBottom:16}}>
-      {quickQ.map(q=><button key={q} onClick={()=>setInput(q)} style={{padding:"7px 14px",borderRadius:99,border:`1px solid ${C.border}`,background:C.white,color:C.ink,fontSize:12,fontWeight:500,cursor:"pointer"}}>{q}</button>)}
-    </div>
-
-    <Card ch={<div style={{height:420,overflowY:"auto",display:"flex",flexDirection:"column",gap:12}}>
-      {msgs.map((m,i)=>(
-        <div key={i} style={{alignSelf:m.role==="user"?"flex-end":"flex-start",maxWidth:"82%",background:m.role==="user"?C.ink:C.s100,color:m.role==="user"?"#fff":C.ink,borderRadius:m.role==="user"?"16px 16px 4px 16px":"16px 16px 16px 4px",padding:"12px 16px",fontSize:14,lineHeight:1.65,animation:"up .3s ease",whiteSpace:"pre-wrap"}}>
-          {m.role==="assistant"&&<div style={{fontSize:10,fontWeight:700,color:C.copper,letterSpacing:1,textTransform:"uppercase",marginBottom:4}}>🐝 BEEBOT</div>}
-          {m.text}
-        </div>
-      ))}
-      {loading&&<div style={{alignSelf:"flex-start",background:C.s100,borderRadius:"16px 16px 16px 4px",padding:"12px 16px",display:"flex",gap:5}}>
-        {[0,1,2].map(i=><div key={i} style={{width:7,height:7,borderRadius:"50%",background:C.copper,animation:`dot 1.2s ease ${i*.25}s infinite`}}/>)}
-      </div>}
-      <div ref={ref}/>
-    </div>} p="16px" style={{marginBottom:12}}/>
-
-    <div style={{display:"flex",gap:10}}>
-      <input value={input} onChange={e=>setInput(e.target.value)} onKeyDown={e=>e.key==="Enter"&&send()} placeholder="Ask about B-BBEE legislation, scoring, documents…"
-        style={{flex:1,padding:"12px 16px",border:`1.5px solid ${C.border}`,borderRadius:12,fontSize:14,outline:"none",background:C.white}}/>
-      <Btn ch={loading?<Spin/>:"↑"} onClick={send} disabled={loading||!input.trim()} style={{borderRadius:12,padding:"12px 18px"}}/>
-    </div>
-
-    <div style={{marginTop:14,padding:"12px 14px",background:C.amberBg,borderRadius:12,border:`1px solid ${C.amberBdr}`,fontSize:12,color:C.amberTxt}}>
-      🐝 BeeBot is an AI assistant, not a qualified BEE practitioner. Always consult a SANAS-accredited verifier for official certification.
-    </div>
-  </div>);
-}
-
-/* ── Verifier Marketplace ─────────────────────────────────── */
-const VERIFIERS=[
-  {id:"empowerlogic", name:"EmpowerLogic",       type:"Verification Agency",     location:"Johannesburg, GP", phone:"011 792 5600",website:"empowerlogic.co.za",   accred:"SANAS",fee:"R3,500–R8,000",turn:"5–7 days",   spec:"Generic codes, all sectors",              badge:"Top Rated",stars:"4.9"},
-  {id:"honeycomb",    name:"Honeycomb BEE Ratings",type:"Verification Agency",   location:"Cape Town, WC",    phone:"021 276 0490",website:"honeycomb-bee.co.za",  accred:"SANAS",fee:"R2,800–R7,000",turn:"5–10 days", spec:"All sector codes, mining specialist",     badge:"Largest Agency",stars:"4.8"},
-  {id:"nkosi",        name:"Nkosi Advisory",      type:"BEE Consultant",          location:"Durban, KZN",      phone:"031 573 6000",website:"nkosiadvisory.co.za",  accred:"SANAS",fee:"R2,400–R6,000",turn:"7–14 days", spec:"QSE & EME specialists",                   badge:"Best Value",stars:"4.7"},
-  {id:"mdi",          name:"MDI Consulting",       type:"BEE Advisory Firm",       location:"Sandton, GP",      phone:"011 234 8900",website:"mdiconsulting.co.za",  accred:"SANAS",fee:"R4,000–R12,000",turn:"5–8 days", spec:"Corporate & listed companies",           badge:"",stars:"4.6"},
-  {id:"serr",         name:"SERR Synergy",         type:"Compliance Partner",      location:"Pretoria, GP",     phone:"012 644 0000",website:"serr.co.za",           accred:"SANAS",fee:"R2,000–R5,000",turn:"7–10 days", spec:"Broad sector coverage, SME focus",       badge:"",stars:"4.5"},
-  {id:"nexia",        name:"Nexia SAB&T BEE Unit", type:"Verification Agency",     location:"Johannesburg, GP", phone:"011 286 5800",website:"nexiasabt.co.za",      accred:"SANAS",fee:"R3,000–R9,000",turn:"5–7 days", spec:"Financial services sector specialist",   badge:"",stars:"4.7"},
-  {id:"ubuntu",       name:"Ubuntu Rating Agency", type:"Verification Agency",     location:"Durban, KZN",      phone:"031 940 5600",website:"ubunturating.co.za",   accred:"SANAS",fee:"R2,200–R5,500",turn:"8–12 days", spec:"Construction & engineering focus",       badge:"",stars:"4.4"},
-  {id:"beecon",       name:"BEE-Con Advisory",     type:"BEE Consultant",          location:"Cape Town, WC",    phone:"021 833 2000",website:"beecon.co.za",         accred:"Member SAICA",fee:"R1,800–R4,500",turn:"10–14 days",spec:"SME & startup specialists",           badge:"",stars:"4.5"},
-];
-
-function VerifierMarket({token}){
-  const [sel,setSel]=useState(null);
-  const [filter,setFilter]=useState("All");
-  const [booking,setBooking]=useState({date:"",time:"",notes:""});
-  const [booked,setBooked]=useState(false);
-  const [loading,setLoading]=useState(false);
-  const types=["All",...new Set(VERIFIERS.map(v=>v.type))];
-  const filtered=filter==="All"?VERIFIERS:VERIFIERS.filter(v=>v.type===filter);
-
-  const confirmBook=async()=>{
-    if(!booking.date||!booking.time)return;
-    setLoading(true);
-    const v=VERIFIERS.find(v=>v.id===sel);
-    if(token) await apiFetch("/api/bookings",{method:"POST",body:{verifierId:sel,verifierName:v.name,...booking}},token).catch(()=>{});
-    setBooked(true);setLoading(false);
-  };
-
-  if(booked){
-    const v=VERIFIERS.find(v=>v.id===sel);
-    return(<div style={{textAlign:"center",padding:"60px 20px",animation:"up .4s ease"}}>
-      <div style={{fontSize:56,marginBottom:16}}>🎉</div>
-      <h2 className="serif" style={{fontSize:30,marginBottom:8}}>Booking Request Sent!</h2>
-      <p style={{fontSize:15,color:C.mid,lineHeight:1.7,marginBottom:24,maxWidth:400,margin:"0 auto 24px"}}><strong>{v?.name}</strong> will contact you at your registered email to confirm your appointment on <strong>{booking.date}</strong> at <strong>{booking.time}</strong>.</p>
-      <Btn ch="Back to Marketplace" variant="outline" onClick={()=>{setBooked(false);setSel(null);}} style={{borderRadius:12}}/>
-    </div>);
-  }
-
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Step 7 of 7</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:6}}>Verification Marketplace</h1>
-    <p style={{fontSize:15,color:C.mid,marginBottom:8}}>Browse real SANAS-accredited verification agencies and BEE advisory firms. Book directly and hand over your BEEcompass readiness pack.</p>
-
-    <div style={{padding:"12px 16px",background:C.s100,borderRadius:12,border:`1px solid ${C.border}`,marginBottom:20,fontSize:13,color:C.s700}}>
-      <strong>Important:</strong> BEEcompass is NOT a verification body. The firms below are independent, SANAS-accredited agencies. Fees and turnaround times are estimates — confirm directly with the agency.
-    </div>
-
-    {/* Filter */}
-    <div style={{display:"flex",gap:8,marginBottom:20,flexWrap:"wrap"}}>
-      {types.map(t=><button key={t} onClick={()=>setFilter(t)} style={{padding:"7px 16px",borderRadius:99,border:`1.5px solid ${filter===t?C.ink:C.border}`,background:filter===t?C.ink:"transparent",color:filter===t?"#fff":C.mid,fontWeight:500,fontSize:13,cursor:"pointer"}}>{t}</button>)}
-    </div>
-
-    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14}}>
-      {filtered.map(v=>(
-        <Card key={v.id} ch={<div>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-            <div><p style={{fontWeight:700,fontSize:16,marginBottom:2}}>{v.name}</p><p style={{fontSize:12,color:C.muted}}>{v.type} · {v.location}</p></div>
-            {v.badge&&<Tag label={v.badge} color={C.green} bg={C.greenBg}/>}
           </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:12}}>
-            {[["Accreditation",v.accred],["Fee Range",v.fee],["Turnaround",v.turn],["Speciality",v.spec]].map(([l,val])=>(
-              <div key={l} style={{background:C.s100,borderRadius:9,padding:"9px 10px"}}>
-                <p style={{fontSize:10,color:C.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:.4,marginBottom:2}}>{l}</p>
-                <p style={{fontSize:12,color:C.ink,fontWeight:500}}>{val}</p>
+        </header>
+
+        {/* Screen */}
+        <div style={{ flex: 1 }}>
+          {view === "dashboard" && <DashboardScreen />}
+          {view === "questionnaire" && <QuestionnaireScreen />}
+          {view === "calculator" && <CalculatorScreen />}
+          {view === "gap" && <GapScreen />}
+          {view === "scenario" && <ScenarioScreen />}
+          {view === "vault" && <VaultScreen />}
+          {view === "beebot" && <BeeBotScreen user={user} />}
+          {view === "marketplace" && <MarketplaceScreen />}
+          {view === "report" && <ReportScreen user={user} />}
+          {view === "beeinfo" && <BeeInfoScreen />}
+        </div>
+      </div>
+
+      {/* Mobile bottom nav */}
+      <nav className="mobile-nav">
+        <div className="mobile-nav-inner">
+          {MOBILE_NAV.map(n => (
+            <button key={n.id} className={`mn-item${view === n.id ? " active" : ""}`} onClick={() => go(n.id)}>
+              <span className="mn-icon">{n.icon}</span>
+              {n.label}
+            </button>
+          ))}
+        </div>
+      </nav>
+    </div>
+  );
+};
+
+/* ─── Dashboard Screen ──────────────────────────────────────── */
+const DashboardScreen = () => {
+  const totalScore = PILLARS.reduce((a, p) => a + p.score, 0);
+  const level = totalScore >= 100 ? "Level 1" : totalScore >= 85 ? "Level 2" : totalScore >= 75 ? "Level 3" : totalScore >= 65 ? "Level 4" : "Non-compliant";
+  const levelClass = totalScore >= 100 ? "level-1" : totalScore >= 85 ? "level-2" : totalScore >= 75 ? "level-3" : totalScore >= 65 ? "level-4" : "level-nc";
+
+  return (
+    <div className="page fade">
+      <div className="page-header">
+        <div className="page-title">Dashboard</div>
+        <div className="page-sub">Your B-BBEE pre-readiness overview · Estimates only — not an official certificate</div>
+      </div>
+
+      {/* Stats */}
+      <div className="stat-grid">
+        <div className="stat-card fade fade-1">
+          <div className="stat-label">Estimated Score</div>
+          <div className="stat-value">{totalScore}</div>
+          <div className="stat-change">out of 115 possible points</div>
+        </div>
+        <div className="stat-card fade fade-2">
+          <div className="stat-label">Estimated Level</div>
+          <div className="stat-value" style={{ fontSize: 22 }}>
+            <span className={levelClass}>{level}</span>
+          </div>
+          <div className="stat-change">Generic scorecard · QSE</div>
+        </div>
+        <div className="stat-card fade fade-3">
+          <div className="stat-label">Pillars Complete</div>
+          <div className="stat-value">3<span style={{ fontSize: 16, fontWeight: 400, color: "var(--muted)" }}>/5</span></div>
+          <div className="stat-change">2 need more data</div>
+        </div>
+        <div className="stat-card fade fade-4">
+          <div className="stat-label">Documents Uploaded</div>
+          <div className="stat-value">7</div>
+          <div className="stat-change stat-up">↑ 3 this week</div>
+        </div>
+      </div>
+
+      <div className="dash-grid">
+        {/* Pillar breakdown */}
+        <div className="card fade fade-1">
+          <div className="card-title">Pillar Breakdown</div>
+          <div className="card-sub">Score per element against maximum available points</div>
+          <div className="pillar-list">
+            {PILLARS.map(p => (
+              <div key={p.name} className="pillar-row">
+                <div className="pillar-name">{p.name}</div>
+                <div className="pillar-bar-wrap">
+                  <ProgBar pct={p.pct} />
+                </div>
+                <div className="pillar-score">{p.score}<span className="pillar-max">/{p.max}</span></div>
               </div>
             ))}
           </div>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={()=>setSel(sel===v.id?null:v.id)} style={{flex:1,padding:"10px",borderRadius:10,border:`1.5px solid ${sel===v.id?C.ink:C.border}`,background:sel===v.id?C.ink:"transparent",color:sel===v.id?"#fff":C.ink,fontWeight:600,fontSize:13,cursor:"pointer"}}>
-              {sel===v.id?"▾ Hide Booking":"Book Now"}
-            </button>
-            <a href={`https://${v.website}`} target="_blank" rel="noopener noreferrer" style={{padding:"10px 16px",borderRadius:10,border:`1.5px solid ${C.border}`,background:"transparent",color:C.mid,fontWeight:500,fontSize:13,textDecoration:"none",display:"flex",alignItems:"center"}}>↗</a>
+        </div>
+
+        {/* Right col */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Score ring */}
+          <div className="card fade fade-2" style={{ textAlign: "center" }}>
+            <div className="card-title">Overall Score</div>
+            <div className="card-sub">Estimated — pre-readiness only</div>
+            <div className="score-ring">
+              <ScoreRing score={totalScore} size={140} stroke={11} />
+            </div>
+            <div style={{ marginTop: -44 }}>
+              <span className={`level-badge ${levelClass}`}>{level}</span>
+            </div>
           </div>
 
-          {sel===v.id&&<div style={{marginTop:14,paddingTop:14,borderTop:`1px solid ${C.border}`,animation:"up .3s ease"}}>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:10}}>
-              <div>
-                <p style={{fontSize:11,fontWeight:600,color:C.muted,textTransform:"uppercase",marginBottom:5}}>Preferred Date</p>
-                <input type="date" value={booking.date} onChange={e=>setBooking(b=>({...b,date:e.target.value}))} style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,outline:"none",background:C.bg}}/>
+          {/* Quick actions */}
+          <div className="card fade fade-3">
+            <div className="card-title">Quick Actions</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 14 }}>
+              {[["📝", "Complete questionnaire", "btn-navy"], ["🎯", "View gap analysis", "btn-outline"], ["📄", "Generate report", "btn-outline"]].map(([icon, label, cls]) => (
+                <button key={label} className={`btn ${cls} btn-full btn-sm`}>
+                  {icon} {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Disclaimer */}
+          <div style={{ background: "var(--warn-bg)", border: "1px solid rgba(155,90,0,.18)", borderRadius: "var(--r-sm)", padding: "12px 14px", fontSize: 12, color: "var(--warn)", lineHeight: 1.6 }}>
+            ⚠️ <strong>Estimate only.</strong> This score is for planning purposes and is not an official B-BBEE certificate. Only SANAS-accredited verifiers can issue certificates.
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Questionnaire Screen ──────────────────────────────────── */
+const QUESTIONS = [
+  { id: 1, pillar: "Ownership", q: "What percentage of your company is owned by Black persons?", type: "number", unit: "%" },
+  { id: 2, pillar: "Ownership", q: "What percentage is owned by Black women?", type: "number", unit: "%" },
+  { id: 3, pillar: "Ownership", q: "What percentage is owned by Black youth (under 35)?", type: "number", unit: "%" },
+  { id: 4, pillar: "Management Control", q: "What percentage of your board members are Black?", type: "number", unit: "%" },
+  { id: 5, pillar: "Management Control", q: "What percentage of senior management are Black?", type: "number", unit: "%" },
+  { id: 6, pillar: "Skills Development", q: "What did you spend on Black employee training last year?", type: "number", unit: "R" },
+  { id: 7, pillar: "Skills Development", q: "How many Black employees received formal training?", type: "number", unit: "people" },
+  { id: 8, pillar: "Enterprise Dev", q: "Do you have any Qualifying Small Enterprise suppliers?", type: "select", opts: ["Yes","No","Unsure"] },
+  { id: 9, pillar: "Enterprise Dev", q: "What % of your total procurement spend is with Black-owned suppliers?", type: "number", unit: "%" },
+  { id: 10, pillar: "Socio-Economic Dev", q: "Did you make any CSI contributions in the last financial year?", type: "select", opts: ["Yes — above 1% NP", "Yes — below 1% NP", "No"] },
+];
+
+const QuestionnaireScreen = () => {
+  const [step, setStep] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const current = QUESTIONS[step];
+  const progress = Math.round(((step) / QUESTIONS.length) * 100);
+
+  return (
+    <div className="page fade">
+      <div className="page-header">
+        <div className="page-title">Questionnaire</div>
+        <div className="page-sub">Answer {QUESTIONS.length} questions to estimate your B-BBEE score</div>
+      </div>
+
+      <div style={{ maxWidth: 640 }}>
+        {/* Progress */}
+        <div className="card" style={{ marginBottom: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 500, color: "var(--text-mid)" }}>
+              Question {step + 1} of {QUESTIONS.length}
+            </div>
+            <div style={{ fontSize: 12, color: "var(--muted)" }}>{progress}% complete</div>
+          </div>
+          <ProgBar pct={progress} />
+          <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {QUESTIONS.map((q, i) => (
+              <div key={q.id} style={{
+                width: 8, height: 8, borderRadius: "50%",
+                background: i < step ? "var(--gold)" : i === step ? "var(--navy)" : "var(--border)",
+                cursor: "pointer", transition: "background var(--t)"
+              }} onClick={() => setStep(i)} />
+            ))}
+          </div>
+        </div>
+
+        {/* Question */}
+        <div className="card fade">
+          <div style={{ marginBottom: 6 }}>
+            <span className="badge badge-gold">{current.pillar}</span>
+          </div>
+          <div style={{ fontFamily: "var(--font-d)", fontSize: 19, fontWeight: 600, color: "var(--navy)", margin: "14px 0 22px", lineHeight: 1.4 }}>
+            {current.q}
+          </div>
+
+          {current.type === "number" && (
+            <div className="form-group">
+              <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                <input
+                  className="form-input"
+                  type="number"
+                  placeholder={`Enter ${current.unit === "R" ? "amount in Rands" : `value in ${current.unit}`}`}
+                  value={answers[current.id] || ""}
+                  onChange={e => setAnswers(a => ({ ...a, [current.id]: e.target.value }))}
+                  style={{ flex: 1 }}
+                />
+                {current.unit !== "R" && (
+                  <div style={{ padding: "11px 14px", background: "var(--bg)", border: "1px solid var(--border)", borderRadius: "var(--r-sm)", fontSize: 14, color: "var(--muted)", flexShrink: 0 }}>
+                    {current.unit}
+                  </div>
+                )}
               </div>
-              <div>
-                <p style={{fontSize:11,fontWeight:600,color:C.muted,textTransform:"uppercase",marginBottom:5}}>Preferred Time</p>
-                <select value={booking.time} onChange={e=>setBooking(b=>({...b,time:e.target.value}))} style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,outline:"none",background:C.bg}}>
-                  <option value="">Select…</option>
-                  {["09:00","10:00","11:00","14:00","15:00","16:00"].map(t=><option key={t}>{t}</option>)}
-                </select>
+              <div className="form-hint">Leave blank if not applicable.</div>
+            </div>
+          )}
+
+          {current.type === "select" && (
+            <div className="form-group">
+              <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                {current.opts.map(opt => (
+                  <label key={opt} style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", border: `1.5px solid ${answers[current.id] === opt ? "var(--gold)" : "var(--border)"}`, borderRadius: "var(--r-sm)", cursor: "pointer", background: answers[current.id] === opt ? "var(--gold-pale)" : "var(--bg)", transition: "all var(--t)" }}>
+                    <input type="radio" name={`q${current.id}`} value={opt} checked={answers[current.id] === opt} onChange={() => setAnswers(a => ({ ...a, [current.id]: opt }))} style={{ accentColor: "var(--gold)" }} />
+                    <span style={{ fontSize: 14, color: "var(--text)" }}>{opt}</span>
+                  </label>
+                ))}
               </div>
             </div>
-            <textarea value={booking.notes} onChange={e=>setBooking(b=>({...b,notes:e.target.value}))} placeholder="Any notes for the verifier (optional)…"
-              style={{width:"100%",padding:"10px 12px",border:`1.5px solid ${C.border}`,borderRadius:9,fontSize:13,outline:"none",background:C.bg,resize:"vertical",minHeight:60,marginBottom:10}}/>
-            <Btn ch={loading?<><Spin size={14}/>Submitting…</>:"Confirm Booking Request"} variant="copper" onClick={confirmBook} disabled={!booking.date||!booking.time||loading} full style={{borderRadius:10}}/>
-          </div>}
-        </div>} style={{borderColor:sel===v.id?C.copper:C.border,borderWidth:sel===v.id?2:1}}/>
-      ))}
+          )}
+
+          <div style={{ display: "flex", gap: 10, marginTop: 24 }}>
+            <button className="btn btn-outline" onClick={() => setStep(s => Math.max(0, s - 1))} disabled={step === 0}>← Previous</button>
+            <button className="btn btn-primary" style={{ marginLeft: "auto" }} onClick={() => {
+              if (step < QUESTIONS.length - 1) setStep(s => s + 1);
+            }}>
+              {step === QUESTIONS.length - 1 ? "Finish →" : "Next →"}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>);
-}
+  );
+};
 
-/* ── Report Generator ─────────────────────────────────────── */
-function ReportGen({token,vals,user}){
-  const [loading,setLoading]=useState(false);
-  const [done,setDone]=useState(false);
-  const total=ELEMENTS.reduce((s,e)=>s+calcEl(e,vals),0);
-  const bee=getLevel(total);
+/* ─── Calculator Screen ─────────────────────────────────────── */
+const CalculatorScreen = () => {
+  const [scores, setScores] = useState({ ownership: 18, management: 11, skills: 15, enterprise: 22, sed: 4 });
+  const total = Object.values(scores).reduce((a, b) => a + b, 0);
+  const level = total >= 100 ? "Level 1" : total >= 85 ? "Level 2" : total >= 75 ? "Level 3" : total >= 65 ? "Level 4" : "Non-compliant";
+  const levelClass = total >= 100 ? "level-1" : total >= 85 ? "level-2" : total >= 75 ? "level-3" : total >= 65 ? "level-4" : "level-nc";
 
-  const generate=async()=>{
-    if(!token){alert("Please sign in to generate reports.");return;}
+  const fields = [
+    { key: "ownership", label: "Ownership", max: 25 },
+    { key: "management", label: "Management Control", max: 19 },
+    { key: "skills", label: "Skills Development", max: 20 },
+    { key: "enterprise", label: "Enterprise & Supplier Dev", max: 40 },
+    { key: "sed", label: "Socio-Economic Dev", max: 5 },
+  ];
+
+  return (
+    <div className="page fade">
+      <div className="page-header">
+        <div className="page-title">Score Calculator</div>
+        <div className="page-sub">Adjust scores per pillar to see your estimated B-BBEE level</div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 20, alignItems: "start" }}>
+        <div className="card">
+          <div className="card-title">Scorecard Entry</div>
+          <div className="card-sub">Enter your points scored per element. Maximum points shown per pillar.</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
+            {fields.map(f => (
+              <div key={f.key} style={{ display: "flex", alignItems: "center", gap: 14, padding: "16px 0", borderBottom: "1px solid var(--bg)" }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--navy)", marginBottom: 6 }}>{f.label}</div>
+                  <ProgBar pct={Math.round((scores[f.key] / f.max) * 100)} />
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+                  <input
+                    type="number"
+                    min={0} max={f.max}
+                    value={scores[f.key]}
+                    onChange={e => setScores(s => ({ ...s, [f.key]: Math.min(f.max, Math.max(0, Number(e.target.value))) }))}
+                    style={{ width: 56, padding: "7px 10px", border: "1.5px solid var(--border)", borderRadius: "var(--r-sm)", fontSize: 14, fontWeight: 600, textAlign: "center", outline: "none" }}
+                  />
+                  <span style={{ fontSize: 12, color: "var(--muted)" }}>/ {f.max}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ width: 220, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="card" style={{ textAlign: "center" }}>
+            <div className="card-sub" style={{ marginBottom: 12 }}>Total Score</div>
+            <div style={{ fontFamily: "var(--font-d)", fontSize: 52, fontWeight: 700, color: "var(--navy)", lineHeight: 1 }}>{total}</div>
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>out of 109 pts</div>
+            <span className={`level-badge ${levelClass}`}>{level}</span>
+          </div>
+          <div className="card">
+            <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>Points to next level</div>
+            {total < 100 && (
+              <div style={{ fontSize: 24, fontFamily: "var(--font-d)", fontWeight: 700, color: "var(--navy)" }}>
+                {total < 65 ? 65 - total : total < 75 ? 75 - total : total < 85 ? 85 - total : 100 - total} pts
+              </div>
+            )}
+            {total >= 100 && <div style={{ fontSize: 14, color: "var(--success)" }}>✓ Maximum level achieved</div>}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Gap Analysis Screen ───────────────────────────────────── */
+const GapScreen = () => {
+  const gaps = [
+    { pillar: "Enterprise & Supplier Dev", pct: 55, priority: "High", actions: ["Increase spend with Black-owned suppliers to 40%+ of procurement", "Develop at least 1 enterprise development beneficiary", "Document all preferential procurement with supporting invoices"] },
+    { pillar: "Management Control", pct: 58, priority: "High", actions: ["Appoint at least 1 additional Black board member", "Set targets for Black senior management representation"] },
+    { pillar: "Ownership", pct: 72, priority: "Medium", actions: ["Review ESOP structure for Black female beneficiaries", "Ensure shareholding agreements are correctly structured"] },
+    { pillar: "Skills Development", pct: 75, priority: "Low", actions: ["Increase training budget allocation by 0.5% of payroll", "Register additional learners on SETA programmes"] },
+    { pillar: "Socio-Economic Dev", pct: 80, priority: "Low", actions: ["Maintain current SED contribution levels"] },
+  ];
+
+  return (
+    <div className="page fade">
+      <div className="page-header">
+        <div className="page-title">Gap Analysis</div>
+        <div className="page-sub">Priority actions to improve your B-BBEE score per pillar</div>
+      </div>
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        {gaps.map((g, i) => (
+          <div key={g.pillar} className={`card fade fade-${i + 1}`}>
+            <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 14, flexWrap: "wrap" }}>
+              <div style={{ flex: 1 }}>
+                <div className="card-title">{g.pillar}</div>
+              </div>
+              <span className={`badge ${g.priority === "High" ? "badge-red" : g.priority === "Medium" ? "badge-gold" : "badge-green"}`}>
+                {g.priority} Priority
+              </span>
+              <span className="badge badge-navy">{g.pct}% achieved</span>
+            </div>
+            <ProgBar pct={g.pct} />
+            <div style={{ marginTop: 14, display: "flex", flexDirection: "column", gap: 8 }}>
+              {g.actions.map((a, j) => (
+                <div key={j} style={{ display: "flex", gap: 10, alignItems: "flex-start", padding: "9px 12px", background: "var(--bg)", borderRadius: "var(--r-sm)", fontSize: 13.5 }}>
+                  <span style={{ color: "var(--gold)", flexShrink: 0, marginTop: 1 }}>→</span>
+                  <span style={{ color: "var(--text-mid)", lineHeight: 1.5 }}>{a}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Scenario Planner ──────────────────────────────────────── */
+const ScenarioScreen = () => {
+  const [vals, setVals] = useState({ ownership: 18, management: 11, skills: 15, enterprise: 22, sed: 4 });
+  const maxes = { ownership: 25, management: 19, skills: 20, enterprise: 40, sed: 5 };
+  const total = Object.values(vals).reduce((a, b) => a + b, 0);
+  const level = total >= 100 ? "Level 1" : total >= 85 ? "Level 2" : total >= 75 ? "Level 3" : total >= 65 ? "Level 4" : "Non-compliant";
+  const levelClass = total >= 100 ? "level-1" : total >= 85 ? "level-2" : total >= 75 ? "level-3" : total >= 65 ? "level-4" : "level-nc";
+
+  return (
+    <div className="page fade">
+      <div className="page-header">
+        <div className="page-title">Scenario Planner</div>
+        <div className="page-sub">Slide each pillar to model future improvements</div>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: 20, alignItems: "start" }}>
+        <div className="card">
+          {Object.entries(vals).map(([key, val]) => (
+            <div key={key} style={{ padding: "16px 0", borderBottom: "1px solid var(--bg)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 500, color: "var(--navy)", textTransform: "capitalize" }}>
+                  {key === "sed" ? "Socio-Economic Dev" : key.charAt(0).toUpperCase() + key.slice(1)}
+                </div>
+                <div style={{ fontFamily: "var(--font-d)", fontSize: 17, fontWeight: 700, color: "var(--navy)" }}>
+                  {val} <span style={{ fontSize: 12, fontWeight: 400, color: "var(--muted)" }}>/ {maxes[key]}</span>
+                </div>
+              </div>
+              <input
+                type="range" min={0} max={maxes[key]} value={val}
+                onChange={e => setVals(v => ({ ...v, [key]: Number(e.target.value) }))}
+                style={{ width: "100%", accentColor: "var(--gold)" }}
+              />
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 11, color: "var(--muted)", marginTop: 3 }}>
+                <span>0</span><span>{maxes[key]}</span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ width: 200, display: "flex", flexDirection: "column", gap: 14 }}>
+          <div className="card" style={{ textAlign: "center" }}>
+            <div className="card-sub" style={{ marginBottom: 10 }}>Projected Score</div>
+            <div style={{ fontFamily: "var(--font-d)", fontSize: 48, fontWeight: 700, color: "var(--navy)", lineHeight: 1 }}>{total}</div>
+            <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 14 }}>/ 109 pts</div>
+            <span className={`level-badge ${levelClass}`}>{level}</span>
+          </div>
+          <button className="btn btn-outline btn-full btn-sm" onClick={() => setVals({ ownership: 18, management: 11, skills: 15, enterprise: 22, sed: 4 })}>
+            ↺ Reset to current
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Document Vault ────────────────────────────────────────── */
+const VaultScreen = () => {
+  const [docs, setDocs] = useState([
+    { name: "Share Register 2024.pdf", type: "Ownership", size: "284 KB", date: "12 Mar 2025" },
+    { name: "BBBEE Certificate 2023.pdf", type: "Compliance", size: "1.1 MB", date: "8 Jan 2025" },
+    { name: "Training Records Q1.xlsx", type: "Skills Dev", size: "540 KB", date: "1 Apr 2025" },
+    { name: "Management Structure.docx", type: "Management", size: "210 KB", date: "20 Feb 2025" },
+    { name: "Supplier Invoices March.zip", type: "Enterprise Dev", size: "3.2 MB", date: "2 Apr 2025" },
+    { name: "CSI Report 2024.pdf", type: "SED", size: "860 KB", date: "15 Dec 2024" },
+    { name: "Employment Equity Report.pdf", type: "Management", size: "1.4 MB", date: "5 Mar 2025" },
+  ]);
+
+  const typeIcon = (t) => ({ "Ownership": "📋", "Compliance": "✅", "Skills Dev": "🎓", "Management": "👔", "Enterprise Dev": "🏭", "SED": "🤝" }[t] || "📄");
+
+  return (
+    <div className="page fade">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div className="page-title">Document Vault</div>
+          <div className="page-sub">Upload and organise your B-BBEE supporting documents</div>
+        </div>
+        <button className="btn btn-primary">+ Upload Document</button>
+      </div>
+
+      {/* Upload zone */}
+      <div className="upload-zone" style={{ marginBottom: 22 }}>
+        <div className="upload-icon">📂</div>
+        <div className="upload-text">Drag and drop files here, or click to browse</div>
+        <div className="upload-hint">PDF, DOCX, XLSX, images — max 50 MB per file</div>
+      </div>
+
+      {/* Documents */}
+      <div className="card">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+          <div className="card-title">Uploaded Documents ({docs.length})</div>
+          <input className="form-input" placeholder="Search documents…" style={{ width: 200, padding: "7px 12px", fontSize: 13 }} />
+        </div>
+        <div className="tbl-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Document</th>
+                <th>Category</th>
+                <th>Size</th>
+                <th>Uploaded</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              {docs.map((d, i) => (
+                <tr key={i}>
+                  <td><div style={{ display: "flex", alignItems: "center", gap: 10 }}><span style={{ fontSize: 18 }}>{typeIcon(d.type)}</span><span style={{ fontWeight: 500 }}>{d.name}</span></div></td>
+                  <td><span className="badge badge-navy">{d.type}</span></td>
+                  <td style={{ color: "var(--muted)" }}>{d.size}</td>
+                  <td style={{ color: "var(--muted)" }}>{d.date}</td>
+                  <td><button className="btn btn-ghost btn-sm">↓ Download</button></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── BeeBot Screen ─────────────────────────────────────────── */
+const BeeBotScreen = ({ user }) => {
+  const [msgs, setMsgs] = useState([
+    { role: "bot", text: "Hello! I'm BeeBot 🐝 — your B-BBEE assistant. I can answer questions about the scorecard, codes, pillars, and how to improve your score. How can I help?" }
+  ]);
+  const [input, setInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const endRef = useRef(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  const send = async () => {
+    if (!input.trim() || loading) return;
+    const q = input.trim();
+    setInput("");
+    setMsgs(m => [...m, { role: "user", text: q }]);
     setLoading(true);
-    try{
-      const res=await fetch(`${API}/api/reports/generate`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${token}`}});
-      const blob=await res.blob();
-      const url=URL.createObjectURL(blob);
-      const a=document.createElement("a");a.href=url;a.download="BEEcompass_PreReadiness_Report.pdf";a.click();
-      URL.revokeObjectURL(url);setDone(true);
-    }catch(e){alert("Report generation failed: "+e.message);}
-    setLoading(false);
+    try {
+      const res = await fetch(`${API_URL}/chat`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${localStorage.getItem("token") || ""}` },
+        body: JSON.stringify({ message: q }),
+      });
+      const data = await res.json();
+      setMsgs(m => [...m, { role: "bot", text: data.reply || data.message || "Sorry, I couldn't get a response right now." }]);
+    } catch {
+      setMsgs(m => [...m, { role: "bot", text: "⚠️ Connection error — please check your internet and try again." }]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  return(<div style={{animation:"up .4s ease"}}>
-    <p style={{fontSize:12,fontWeight:600,letterSpacing:2,textTransform:"uppercase",color:C.muted,marginBottom:8}}>Step 6 of 7</p>
-    <h1 className="serif" style={{fontSize:32,marginBottom:6}}>Pre-Readiness Report</h1>
-    <p style={{fontSize:15,color:C.mid,marginBottom:20}}>Generate a professional PDF that summarises your BEE readiness position to hand to your SANAS-accredited verifier. Saves you time and money.</p>
-
-    {/* Preview */}
-    <Card ch={<div>
-      <div style={{background:C.ink,borderRadius:14,padding:"22px",marginBottom:16}}>
-        <p style={{fontSize:10,color:C.muted,letterSpacing:2,textTransform:"uppercase",marginBottom:6}}>BEECOMPASS — PRE-READINESS REPORT</p>
-        <p style={{fontFamily:"'Instrument Serif'",fontSize:22,color:"#fff",marginBottom:4}}>B-BBEE Pre-Readiness Report</p>
-        <p style={{fontSize:14,color:C.copper}}>{user?.company||"Your Company"}</p>
-        <p style={{fontSize:11,color:"#475569",marginTop:4}}>Generated: {new Date().toLocaleDateString("en-ZA")}</p>
+  return (
+    <div className="page fade" style={{ padding: "20px 28px 0" }}>
+      <div style={{ marginBottom: 16 }}>
+        <div className="page-title">BeeBot</div>
+        <div className="page-sub">AI-powered B-BBEE assistant · Restricted to B-BBEE topics only</div>
       </div>
 
-      <div style={{padding:"12px",background:C.amberBg,borderRadius:10,border:`1px solid ${C.amberBdr}`,marginBottom:16,fontSize:12,color:C.amberTxt}}>
-        <strong>DISCLAIMER:</strong> This report is a pre-readiness estimate only. It is NOT an official B-BBEE certificate. Only a SANAS-accredited agency may issue an official certificate.
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:16}}>
-        <div style={{background:C.s100,borderRadius:12,padding:"16px"}}>
-          <p style={{fontSize:11,color:C.muted,marginBottom:4}}>ESTIMATED LEVEL</p>
-          <p style={{fontFamily:"'Instrument Serif'",fontSize:26,color:bee.clr}}>{bee.label}</p>
+      <div className="chat-wrap">
+        <div className="chat-header">
+          <div className="chat-avatar">🐝</div>
+          <div>
+            <div className="chat-name">BeeBot</div>
+            <div className="chat-status">● Online · Powered by Claude</div>
+          </div>
+          <div style={{ marginLeft: "auto" }}>
+            <span className="badge badge-gold">BEE topics only</span>
+          </div>
         </div>
-        <div style={{background:C.s100,borderRadius:12,padding:"16px"}}>
-          <p style={{fontSize:11,color:C.muted,marginBottom:4}}>WEIGHTED SCORE</p>
-          <p style={{fontFamily:"'Instrument Serif'",fontSize:26}}>{total.toFixed(1)} / 109</p>
+
+        <div className="chat-msgs">
+          {msgs.map((m, i) => (
+            <div key={i} className={`msg-row${m.role === "user" ? " user" : ""}`}>
+              {m.role === "bot" && <div className="msg-mini-avatar">🐝</div>}
+              <div className={`msg-bubble ${m.role}`}>{m.text}</div>
+            </div>
+          ))}
+          {loading && (
+            <div className="msg-row">
+              <div className="msg-mini-avatar">🐝</div>
+              <div className="msg-bubble bot" style={{ display: "flex", gap: 5, alignItems: "center" }}>
+                <div className="spinner-gold" /><span style={{ fontSize: 13, color: "var(--muted)" }}>Thinking…</span>
+              </div>
+            </div>
+          )}
+          <div ref={endRef} />
+        </div>
+
+        <div className="chat-input-wrap">
+          <input
+            className="chat-input"
+            placeholder="Ask a B-BBEE question…"
+            value={input}
+            onChange={e => setInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && send()}
+          />
+          <button className="btn btn-primary" onClick={send} disabled={loading || !input.trim()}>
+            {loading ? <div className="spinner" /> : "Send →"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ─── Verifier Marketplace ──────────────────────────────────── */
+const MarketplaceScreen = () => {
+  const [filter, setFilter] = useState("All");
+  const cities = ["All", "Johannesburg", "Cape Town", "Durban", "Pretoria", "Sandton"];
+  const filtered = filter === "All" ? VERIFIERS : VERIFIERS.filter(v => v.city === filter);
+
+  return (
+    <div className="page fade">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 20, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div className="page-title">Verifier Marketplace</div>
+          <div className="page-sub">SANAS-accredited verification agencies across South Africa</div>
         </div>
       </div>
 
-      <p style={{fontSize:14,fontWeight:700,marginBottom:10}}>Report includes:</p>
-      {["Executive summary with estimated level range","Pillar-by-pillar breakdown with progress bars","Uploaded documents index","Priority action plan","Recommended next steps","SANAS verifier referral page"].map(item=>(
-        <div key={item} style={{display:"flex",gap:8,marginBottom:8,fontSize:14}}><span style={{color:C.green}}>✓</span>{item}</div>
-      ))}
-    </div>} p="22px" style={{marginBottom:20}}/>
+      <div style={{ background: "var(--warn-bg)", border: "1px solid rgba(155,90,0,.18)", borderRadius: "var(--r-sm)", padding: "10px 14px", fontSize: 13, color: "var(--warn)", marginBottom: 20 }}>
+        ℹ️ Only SANAS-accredited verifiers can issue official B-BBEE certificates. BEEcompass facilitates introductions only.
+      </div>
 
-    {!done
-      ?<Btn ch={loading?<><Spin size={14}/>Generating PDF…</>:"⬇ Download Pre-Readiness Report"} variant="copper" onClick={generate} disabled={loading} full style={{borderRadius:14,padding:"14px",fontSize:15}}/>
-      :<div style={{textAlign:"center",padding:"20px",background:C.greenBg,borderRadius:14,border:`1px solid ${C.green}30`}}>
-        <div style={{fontSize:28,marginBottom:6}}>✅</div>
-        <p style={{fontWeight:700,color:C.green,fontSize:16}}>Report Downloaded!</p>
-        <p style={{fontSize:13,color:C.mid,marginTop:4}}>BEEcompass_PreReadiness_Report.pdf</p>
-        <Btn ch="Generate Again" variant="outline" onClick={()=>setDone(false)} style={{borderRadius:10,marginTop:12,fontSize:13}}/>
-      </div>}
+      {/* Filter */}
+      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 18 }}>
+        {cities.map(c => (
+          <button key={c} className={`btn btn-sm ${filter === c ? "btn-navy" : "btn-outline"}`} onClick={() => setFilter(c)}>{c}</button>
+        ))}
+      </div>
 
-    <div style={{marginTop:20}}><Disclaimer/></div>
-  </div>);
-}
+      <div className="verifier-grid">
+        {filtered.map((v, i) => (
+          <div key={v.name} className={`verifier-card fade fade-${(i % 4) + 1}`}>
+            <div className="vc-header">
+              <div>
+                <div className="vc-name">{v.name}</div>
+                <div className="vc-city">📍 {v.city}</div>
+              </div>
+              <div className="vc-rating">★ {v.rating}</div>
+            </div>
+            <div className="vc-tags">
+              {v.specialities.map(s => <span key={s} className="vc-tag">{s}</span>)}
+              <span className="vc-tag" style={{ background: "var(--success-bg)", color: "var(--success)", border: "1px solid rgba(31,107,64,.2)" }}>SANAS Accredited</span>
+            </div>
+            <div className="vc-desc">{v.desc}</div>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button className="btn btn-primary btn-sm" style={{ flex: 1 }}>Book Consultation</button>
+              <button className="btn btn-outline btn-sm">Learn More</button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
 
-/* ═══════════════════════════════════════════════════════════
-   ROOT
-═══════════════════════════════════════════════════════════ */
-export default function App(){
-  const [screen,setScreen]=useState("marketing"); // marketing | auth | app
-  const [authMode,setAuthMode]=useState("signup");
-  const [session,setSession]=useState(null);
-  const [user,setUser]=useState(null);
-  const [vals,setVals]=useState(DVALS);
+/* ─── Report Screen ─────────────────────────────────────────── */
+const ReportScreen = ({ user }) => {
+  const totalScore = PILLARS.reduce((a, p) => a + p.score, 0);
+  return (
+    <div className="page fade">
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 24, flexWrap: "wrap", gap: 12 }}>
+        <div>
+          <div className="page-title">Pre-Readiness Report</div>
+          <div className="page-sub">Generate a PDF report of your B-BBEE pre-readiness assessment</div>
+        </div>
+        <button className="btn btn-primary">📄 Download PDF</button>
+      </div>
 
-  useEffect(()=>{
-    sb.auth.getSession().then(({data:{session}})=>{
-      if(session){setSession(session);setScreen("app");
-        apiFetch("/api/profile",{},session.access_token).then(p=>{if(p&&!p.error)setUser(p);}).catch(()=>{});
-      }
-    });
-    const {data:{subscription}}=sb.auth.onAuthStateChange((_,session)=>{
-      setSession(session);
-      if(!session){setScreen("marketing");setUser(null);}
-    });
-    return ()=>subscription.unsubscribe();
-  },[]);
+      {/* Report preview */}
+      <div className="card" style={{ maxWidth: 680, border: "2px solid var(--border)", background: "var(--white)" }}>
+        {/* Report header */}
+        <div style={{ background: "var(--navy)", borderRadius: "10px 10px 0 0", margin: "-22px -22px 24px", padding: "28px 28px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 12 }}>
+            <div>
+              <div style={{ fontFamily: "var(--font-d)", fontSize: 22, fontWeight: 700, color: "var(--white)", marginBottom: 4 }}>B-BBEE Pre-Readiness Report</div>
+              <div style={{ fontSize: 13, color: "rgba(255,255,255,.5)" }}>Prepared by BEEcompass · {new Date().toLocaleDateString("en-ZA", { day: "2-digit", month: "long", year: "numeric" })}</div>
+            </div>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontFamily: "var(--font-d)", fontSize: 36, fontWeight: 700, color: "var(--gold)", lineHeight: 1 }}>{totalScore}</div>
+              <div style={{ fontSize: 11, color: "rgba(255,255,255,.45)", marginTop: 2 }}>estimated points</div>
+            </div>
+          </div>
+        </div>
 
-  const handleAuth=(sess,profile)=>{
-    setSession(sess);setUser(profile);setScreen("app");
-    if(profile?.scorecard)setVals({...DVALS,...profile.scorecard});
+        <div className="success-box" style={{ marginBottom: 20, fontSize: 12 }}>
+          ⚠️ This report is for internal planning purposes only. It is not an official B-BBEE certificate and has no legal standing.
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div className="card-title">Company Information</div>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+            {[["Company", "Autonomylabs (Pty) Ltd"], ["Contact", user?.name || "—"], ["Scorecard", "Generic · QSE"], ["Assessment Date", new Date().toLocaleDateString("en-ZA")]].map(([l, v]) => (
+              <div key={l}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: "var(--muted)", textTransform: "uppercase", letterSpacing: ".5px", marginBottom: 3 }}>{l}</div>
+                <div style={{ fontSize: 14, color: "var(--navy)", fontWeight: 500 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="divider" />
+
+        <div className="card-title" style={{ marginBottom: 14 }}>Pillar Scores</div>
+        {PILLARS.map(p => (
+          <div key={p.name} className="pillar-row">
+            <div className="pillar-name" style={{ width: "auto", flex: 1, fontSize: 13 }}>{p.name}</div>
+            <div style={{ flex: 2, margin: "0 12px" }}><ProgBar pct={p.pct} /></div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--navy)", flexShrink: 0 }}>{p.score}/{p.max}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ─── BEE Info Screen ───────────────────────────────────────── */
+const BeeInfoScreen = () => {
+  const [open, setOpen] = useState(null);
+  const topics = [
+    { title: "What is B-BBEE?", body: "Broad-Based Black Economic Empowerment (B-BBEE) is South Africa's policy framework to redress apartheid-era inequalities by promoting black participation across the economy. It applies to all businesses operating in SA and affects government procurement, licensing, and private contracts." },
+    { title: "The 5 Pillars of the Generic Scorecard", body: "1. Ownership (25 pts) — Black shareholding in the business.\n2. Management Control (19 pts) — Black representation at board and executive level.\n3. Skills Development (20 pts) — Training investment for Black employees.\n4. Enterprise & Supplier Development (40 pts) — Procurement from Black-owned suppliers and support for Black-owned SMEs.\n5. Socio-Economic Development (5 pts) — CSI contributions benefiting Black communities." },
+    { title: "EME, QSE, and Generic Scorecards", body: "Exempted Micro-Enterprises (EMEs) have a turnover under R10m — they automatically qualify as Level 1 if 100% Black-owned, or Level 2 if 51%+ Black-owned, with no scorecard required.\n\nQualifying Small Enterprises (QSEs) have turnover R10m–R50m and measure only the top 4 of 5 pillars.\n\nGeneric Companies have turnover above R50m and must measure all 5 pillars." },
+    { title: "How B-BBEE levels work", body: "Level 1 = 100+ pts · Level 2 = 85–99 pts · Level 3 = 75–84 pts · Level 4 = 65–74 pts · Level 5 = 55–64 pts · Level 6 = 45–54 pts · Level 7 = 40–44 pts · Level 8 = 30–39 pts · Non-Compliant = below 30 pts.\n\nHigher levels mean more recognition value when clients or government calculate their own procurement scores." },
+    { title: "Priority elements and sub-minimums", body: "Ownership, Skills Development, and Enterprise & Supplier Development are 'priority elements' on the generic scorecard. Failing to score at least 40% of the weighting points for any priority element results in your overall level being discounted by one level." },
+    { title: "Sector codes and their impact", body: "Several sectors have their own B-BBEE codes: Financial Services (FSC), Construction, Mining, Tourism, ICT, Agriculture, and more. Sector codes take precedence over the generic scorecard for businesses in those sectors and may have different weightings and thresholds." },
+  ];
+  return (
+    <div className="page fade">
+      <div className="page-header">
+        <div className="page-title">B-BBEE Knowledge Base</div>
+        <div className="page-sub">Plain-language explanations of B-BBEE codes, pillars, and compliance</div>
+      </div>
+      <div style={{ maxWidth: 720, display: "flex", flexDirection: "column", gap: 0 }}>
+        {topics.map((t, i) => (
+          <div key={i} style={{ borderBottom: "1px solid var(--border)" }}>
+            <button onClick={() => setOpen(open === i ? null : i)} style={{ width: "100%", textAlign: "left", background: "none", border: "none", padding: "18px 4px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 16 }}>
+              <span style={{ fontFamily: "var(--font-d)", fontWeight: 600, color: "var(--navy)", fontSize: 16 }}>{t.title}</span>
+              <span style={{ color: "var(--muted)", fontSize: 20, flexShrink: 0 }}>{open === i ? "−" : "+"}</span>
+            </button>
+            {open === i && (
+              <div style={{ paddingBottom: 20, fontSize: 14, color: "var(--text-mid)", lineHeight: 1.8, whiteSpace: "pre-line", paddingLeft: 4 }}>{t.body}</div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+/* ─── Root App ───────────────────────────────────────────────── */
+export default function App() {
+  const [screen, setScreen] = useState("landing"); // landing | auth | app
+  const [authTab, setAuthTab] = useState("signup");
+  const [user, setUser] = useState(null);
+
+  // Check for saved session
+  useEffect(() => {
+    const saved = localStorage.getItem("bee_user");
+    if (saved) {
+      try { const u = JSON.parse(saved); setUser(u); setScreen("app"); } catch {}
+    }
+  }, []);
+
+  const handleAuth = (tab) => { setAuthTab(tab); setScreen("auth"); };
+
+  const handleAuthSuccess = (data) => {
+    const u = data.user || data;
+    setUser(u);
+    localStorage.setItem("bee_user", JSON.stringify(u));
+    if (data.token) localStorage.setItem("token", data.token);
+    setScreen("app");
   };
 
-  const handleLogout=async()=>{
-    await sb.auth.signOut();
-    setScreen("marketing");setSession(null);setUser(null);setVals(DVALS);
+  const handleLogout = () => {
+    localStorage.removeItem("bee_user");
+    localStorage.removeItem("token");
+    setUser(null);
+    setScreen("landing");
   };
 
-  if(screen==="marketing") return(<><style>{CSS}</style>
-    <MarketingSite onSignUp={()=>{setAuthMode("signup");setScreen("auth");}} onSignIn={()=>{setAuthMode("login");setScreen("auth");}}/></>);
-
-  if(screen==="auth") return <Auth mode={authMode} onAuth={handleAuth} onBack={()=>setScreen("marketing")}/>;
-
-  return <AppShell session={session} user={user} setUser={setUser} onLogout={handleLogout} vals={vals} setVals={setVals}/>;
+  return (
+    <>
+      <GlobalStyles />
+      {screen === "landing" && <LandingPage onAuth={handleAuth} />}
+      {screen === "auth" && (
+        <AuthPage
+          initialTab={authTab}
+          onSuccess={handleAuthSuccess}
+          onBack={() => setScreen("landing")}
+        />
+      )}
+      {screen === "app" && <AppShell user={user} onLogout={handleLogout} />}
+    </>
+  );
 }
