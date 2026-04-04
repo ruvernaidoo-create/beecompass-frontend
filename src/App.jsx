@@ -7,8 +7,6 @@ const supabase = createClient(
   import.meta.env.VITE_SUPABASE_ANON_KEY
 );
 
-/*const API = import.meta.env.VITE_API_URL || "http://localhost:8080";*/
-
 const API = "https://beecompass-backend-production.up.railway.app";
 
 const apiFetch = async (path, options = {}, token = null) => {
@@ -114,21 +112,19 @@ function Auth({onAuth}) {
     setLoading(true); setError("");
     try {
       if(mode==="signup"){
-        const {error:e}=await supabase.auth.signUp({email:f.email,password:f.pw,options:{data:{name:f.name,company:f.company}}});
-        if(e) throw e;
-        // Create profile in backend after signup
-        const {data:{session}}=await supabase.auth.signInWithPassword({email:f.email,password:f.pw});
-        if(session){
-          await apiFetch("/api/profile",{method:"POST",body:{name:f.name,company:f.company}},session.access_token);
-          onAuth(session,{name:f.name,company:f.company});
-        }
+        // Sign up via backend
+        const signupRes=await apiFetch("/api/auth/signup",{method:"POST",body:{email:f.email,password:f.pw,name:f.name,company:f.company}});
+        if(signupRes.error) throw new Error(signupRes.error);
+        setError("✅ Account created! Check your email to confirm, then sign in.");
+        setMode("login");
+        setF({name:"",company:"",email:"",pw:""});
       } else {
-        const {data:{session},error:e}=await supabase.auth.signInWithPassword({email:f.email,password:f.pw});
-        if(e) throw e;
-        console.log("Session:", session); // DEBUG
-        console.log("Token:", session?.access_token); // DEBUG
-        const profile=await apiFetch("/api/profile",{},session.access_token);
-        onAuth(session,profile);
+        // Sign in via backend
+        const signinRes=await apiFetch("/api/auth/signin",{method:"POST",body:{email:f.email,password:f.pw}});
+        if(signinRes.error) throw new Error(signinRes.error);
+        if(signinRes.success && signinRes.session){
+          onAuth(signinRes.session, signinRes.user.profile || {name:"",company:""});
+        }
       }
     } catch(e){ setError(e.message||"Something went wrong"); }
     setLoading(false);
@@ -173,7 +169,7 @@ function Auth({onAuth}) {
           </div>
         ))}
 
-        {error&&<div style={{fontSize:13,color:"#FCA5A5",marginBottom:12,padding:"10px 12px",background:"#B91C1C20",borderRadius:9}}>{error}</div>}
+        {error&&<div style={{fontSize:13,color:error.includes("✅")?"#86EFAC":"#FCA5A5",marginBottom:12,padding:"10px 12px",background:error.includes("✅")?"#16A34A20":"#B91C1C20",borderRadius:9}}>{error}</div>}
 
         <button onClick={submit} disabled={loading} style={{width:"100%",padding:"13px",border:"none",borderRadius:12,cursor:"pointer",fontWeight:700,fontSize:15,background:`linear-gradient(135deg,${C.copper},${C.copperLt})`,color:"#fff",marginTop:4,display:"flex",alignItems:"center",justifyContent:"center",gap:8}}>
           {loading?<Spinner/>:(mode==="login"?"Sign In →":"Start Free Trial →")}
@@ -779,26 +775,9 @@ export default function App() {
   const [page,setPage]=useState("dashboard");
   const [vals,setVals]=useState(DEFAULTS);
 
-  // Restore Supabase session on load
-  useEffect(()=>{
-    supabase.auth.getSession().then(({data:{session}})=>{
-      if(session){
-        setSession(session);
-        apiFetch("/api/profile",{},session.access_token).then(p=>{
-          if(p&&!p.error){setUser(p);setAuthed(true);}
-        }).catch(()=>{});
-      }
-    });
-    const {data:{subscription}}=supabase.auth.onAuthStateChange((_,session)=>{
-      setSession(session);
-      if(!session){setAuthed(false);setUser(null);}
-    });
-    return ()=>subscription.unsubscribe();
-  },[]);
-
   const handleAuth=(sess,profile)=>{
     setSession(sess);
-    setUser(profile||{name:"Demo User",company:"Demo Company SA"});
+    setUser(profile||{name:"",company:""});
     setAuthed(true);
     if(sess&&profile?.scorecard){
       setVals({...DEFAULTS,...profile.scorecard});
