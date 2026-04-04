@@ -125,6 +125,8 @@ function Auth({onAuth}) {
       } else {
         const {data:{session},error:e}=await supabase.auth.signInWithPassword({email:f.email,password:f.pw});
         if(e) throw e;
+        console.log("Session:", session); // DEBUG
+        console.log("Token:", session?.access_token); // DEBUG
         const profile=await apiFetch("/api/profile",{},session.access_token);
         onAuth(session,profile);
       }
