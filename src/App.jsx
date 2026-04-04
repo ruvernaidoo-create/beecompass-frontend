@@ -24,8 +24,6 @@ const apiFetch = async (path, options = {}, token = null) => {
 };
 
 import VerificationSuccess from './pages/VerificationSuccess';
-
-// Add this route:
 <Route path="/auth/callback" element={<VerificationSuccess />} />
 
 
